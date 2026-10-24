@@ -1919,12 +1919,6 @@
         grpBeladySim.add(cube);
         frameMeshesBelady4.push(cube);
       }
-
-      // Top Center Banner
-      const centerBanner = createLabelSprite("BELADY'S ANOMALY SIMULATOR", "WORKLOAD D: [1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5]", "#38bdf8", "rgba(15, 23, 42, 0.95)", "#0284c7");
-      centerBanner.scale.set(7.5, 2.0, 1);
-      centerBanner.position.set(0, 5.5, -0.5);
-      grpBeladySim.add(centerBanner);
     }
 
     function buildBeladyArena() {
@@ -1942,11 +1936,6 @@
       );
       basePlatform.position.set(0, -0.1, 0);
       grpBeladyArena.add(basePlatform);
-
-      const legendSprite = createLabelSprite("🔴 FIFO (Non-Stack)   🟢 LRU (Stack)", "WORKLOAD D: [1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5]", "#38bdf8", "rgba(15, 23, 42, 0.95)", "#0284c7");
-      legendSprite.scale.set(6.2, 1.8, 1);
-      legendSprite.position.set(0, 8.2, -1.5);
-      grpBeladyArena.add(legendSprite);
 
       capacities.forEach((c, idx) => {
         const x = (idx - 2) * 3.6;
