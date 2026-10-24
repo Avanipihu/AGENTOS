@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Member 3 Submission - Integration and Visuals</title>
+  <style>
+    body {
+      font-family: Arial, Calibri, "Segoe UI", sans-serif;
+      line-height: 1.6;
+      color: #111827;
+      max-width: 850px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    h1 { font-size: 24px; color: #1e3a8a; border-bottom: 2px solid #2563eb; padding-bottom: 6px; margin-top: 30px; }
+    h2 { font-size: 19px; color: #1e40af; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-top: 26px; }
+    h3 { font-size: 16px; color: #0f172a; margin-top: 20px; }
+    p, li { font-size: 14px; text-align: justify; }
+    ul, ol { margin-left: 20px; margin-bottom: 14px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0;
+      font-size: 13.5px;
+    }
+    th, td {
+      border: 1px solid #94a3b8;
+      padding: 8px 10px;
+      text-align: left;
+    }
+    th {
+      background-color: #f1f5f9;
+      font-weight: bold;
+      color: #0f172a;
+    }
+    tr:nth-child(even) { background-color: #f8fafc; }
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 11px;
+    }
+    .figure-box {
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      padding: 16px;
+      border-radius: 6px;
+      margin: 20px 0;
+      text-align: center;
+    }
+    .figure-caption {
+      font-size: 12.5px;
+      color: #475569;
+      margin-top: 8px;
+      text-align: left;
+      font-style: italic;
+    }
+    .code-box {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12.5px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>AgentOS: Integration, Documentary Case Analysis & Visual Evaluation</h1>
+  <p><strong>Author:</strong> Member 3 (Integration & Visuals)<br>
+  <strong>Scope:</strong> Operating Systems Unit 4 (Memory Management) & Unit 5 (File Systems)<br>
+  <strong>Evaluation Setting:</strong> Omarchy Desktop Linux Setting & Standard Course Curriculum</p>
+
+  <hr>
+
+  <h2>Executive Summary & Role Scope</h2>
+  <p>This report section presents the comprehensive empirical synthesis, theoretical validation, and visual artifacts authored by <strong>Member 3 (Integration & Visuals)</strong> for the AgentOS project. Member 3 is responsible for:</p>
+  <ol>
+    <li><strong>Module Interfacing:</strong> Unifying the discrete-time execution outputs of the Unit 4 Memory Simulator and Unit 5 File System Simulator into a coherent systems evaluation.</li>
+    <li><strong>Documentary Case Study & Related Work:</strong> Analyzing <strong>Omarchy</strong> [O1–O4] as a contemporary agent-facing Linux desktop environment, and synthesizing the literature matrix contrasting Omarchy, <strong>AIOS</strong> (Mei et al., COLM 2025) [A1], and <strong>MemGPT</strong> (Packer et al., 2023) [A2].</li>
+    <li><strong>Publication-Grade Vector Visualizations:</strong> Developing an automated, zero-dependency SVG generator (<code>generate_visuals.py</code>) producing Figures 1 through 5, proving <strong>Belady's Anomaly</strong>, workload sensitivity, step-by-step frame divergence (Steps 5–8), hierarchical access matrices, and operational scenario distributions.</li>
+    <li><strong>Interactive Visual Laboratory:</strong> Building the unified browser workbench (<code>outputs/visuals/index.html</code>) featuring an interactive directory tree, node inode inspector, live security rule evaluator, and physical RAM bus simulation.</li>
+    <li><strong>Reproducibility Verification:</strong> Ensuring all figures, tables, and traces are 100% verified against the test matrix (<code>evaluate.py --check</code>, 42/42 checks passing).</li>
+  </ol>
+
+  <h2>1. Introduction — Integration, Visual Evaluation, and Research Framing</h2>
+  
+  <h3>1.1 Contemporary Setting: The Omarchy Case Context</h3>
+  <p>In modern software engineering, developers increasingly employ autonomous AI coding agents to edit files, execute test suites, and coordinate multi-step workflows. To ground our operating systems study in real-world practices, this investigation examines <strong>Omarchy</strong> [O1–O4], an Arch-based Linux desktop distribution explicitly tailored for workflows with AI coding agents:</p>
+  <ul>
+    <li><strong>Desktop Infrastructure [O1]:</strong> Combines Arch Linux with the Hyprland tiling Wayland compositor and Quickshell desktop widgets, creating an agile, scriptable workstation.</li>
+    <li><strong>Agent Integration [O2]:</strong> Features built-in launchers for multiple coding agents, default agent configuration hooks, and an Omarchy skill enabling agents to query desktop commands and window states.</li>
+    <li><strong>CLI and User Dotfiles [O3, O4]:</strong> Exposes workspace management through the <code>omarchy</code> command-line utility and organizes configuration into modular user dotfiles.</li>
+  </ul>
+  <p>While Omarchy demonstrates how developers interact with coding agents in a modern Linux desktop, it operates under standard single-user Linux semantics. It does not introduce specialized kernel memory managers for agents or enforce fine-grained per-role file isolation. This motivates the need for our bounded, principled pedagogical model.</p>
+
+  <h3>1.2 Research Question & Two-Layer Methodology</h3>
+  <p><strong>Core Research Question:</strong> <em>How do conventional operating systems principles regarding limited physical memory and organized, protected file systems help analyze a hypothetical multi-agent workspace, and what do reproducible simulations demonstrate about those mechanisms?</em></p>
+  <p>To answer this question rigorously, the evaluation is structured around two complementary layers:</p>
+  <ol>
+    <li><strong>Documentary Case Analysis:</strong> Extracting observable architectural decisions and resource boundaries from Omarchy's official documentation [O1–O4].</li>
+    <li><strong>Bounded Pedagogical Simulation (AgentOS):</strong> Implementing deterministic software simulations modeling three cooperative roles (<strong>Research</strong>, <strong>Coding</strong>, and <strong>Report</strong>) sharing <em>m = 3</em> physical memory frames and a protected file directory hierarchy.</li>
+  </ol>
+
+  <h3>1.3 Claim Boundaries and Negative Declarations</h3>
+  <ul>
+    <li><strong>Simulation Boundary:</strong> AgentOS is a report-first discrete simulator. It does <strong>not</strong> implement a new OS kernel, run real LLMs, allocate physical RAM pages, or execute live system calls against the host disk.</li>
+    <li><strong>Role Abstraction:</strong> The labels "Research Agent", "Coding Agent", and "Report Agent" designate simulated workload profiles, not autonomous cognitive entities or OS processes.</li>
+    <li><strong>Academic Precedents Disambiguation:</strong>
+      <ul>
+        <li><strong>Omarchy [O1–O4]:</strong> Desktop distribution and agent launcher tooling (product positioning).</li>
+        <li><strong>AIOS [A1]:</strong> Academic research architecture proposing an LLM agent operating system with specialized kernel scheduling, context switching, and access control.</li>
+        <li><strong>MemGPT [A2]:</strong> OS-inspired virtual context management system organizing LLM prompt memory into hierarchical tiers.</li>
+        <li><strong>AgentOS:</strong> Pedagogical case study verifying Unit 4 and Unit 5 classical OS concepts.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>2. Problem Statement & Scope — Integration Perspective</h2>
+  <p>Evaluating virtual memory and file systems in multi-agent environments presents four interconnected systems challenges:</p>
+  <ol>
+    <li><strong>Paging Divergence:</strong> Two replacement policies receiving identical reference strings diverge in frame residency upon a single recency refresh, leading to completely separate downstream eviction paths.</li>
+    <li><strong>Allocation Anomalies (Belady's Anomaly):</strong> Expanding physical frame allocation is conventionally assumed to monotonically reduce or preserve page fault rates. Member 3 must visually prove that FIFO violates this assumption on specific workloads, whereas LRU guarantees monotonic improvement.</li>
+    <li><strong>Protection Boundaries & Information Leakage:</strong> In multi-tenant workspaces, authorization must be validated <em>prior</em> to node existence resolution. If an unauthorized agent attempts an access, it must be denied without revealing whether the target path exists.</li>
+    <li><strong>Lost-Update Prevention:</strong> When agents concurrently read, compute, and write shared deliverables, optimistic concurrency control must detect stale version overwrites.</li>
+  </ol>
+
+  <h2>3. Theoretical Background & Related Work</h2>
+
+  <h3>3.1 Demand Paging, Stack Algorithms, and Belady's Anomaly</h3>
+  <p>In demand-paged virtual memory, logical address space is divided into equal-sized <strong>pages</strong>, and physical memory is partitioned into <strong>frames</strong> [C1]. A reference to an absent page generates a <strong>page fault</strong> trap:</p>
+  <ul>
+    <li><strong>Page Hit vs. TLB Hit:</strong> In hardware architectures, a Translation Lookaside Buffer (TLB) caches virtual-to-physical address mappings. A TLB hit speeds up hardware translation. In AgentOS, our metric is <strong>page residency</strong>: a page hit indicates that the requested abstract page identifier is currently resident in one of the 3 simulated physical frames.</li>
+    <li><strong>Stack Algorithms:</strong> An algorithm is a stack algorithm if the set of pages resident in an <em>m</em>-frame configuration at time <em>t</em> is strictly a subset of the pages resident in an <em>(m+1)</em>-frame configuration: <code>M(m, t) ⊆ M(m+1, t)</code>.</li>
+    <li><strong>Least Recently Used (LRU):</strong> Because LRU always maintains the <em>m</em> most recently referenced unique pages, expanding capacity to <em>m+1</em> merely appends the <em>(m+1)</em>-th most recently referenced page without altering the residency of the top <em>m</em> pages. Therefore, LRU satisfies the inclusion property and is mathematically immune to Belady's Anomaly (<code>Faults(m+1) ≤ Faults(m)</code>).</li>
+    <li><strong>First-In, First-Out (FIFO):</strong> FIFO evicts the page loaded earliest, completely uncoupling victim selection from recency. Because arrival order does not satisfy inclusion, expanding capacity can cause FIFO to retain useless pages while evicting immediately required pages, producing <strong>Belady's Anomaly</strong> (<code>Faults(m+1) &gt; Faults(m)</code>).</li>
+  </ul>
+
+  <h3>3.2 Hierarchical File Systems & Longest-Prefix Access Control</h3>
+  <p>In hierarchical file systems, directory trees are organized from root <code>/</code>. Access permissions map agents (subjects) to path prefixes (objects) across privileges {r, w, c, d} (read/list, write/overwrite, create/mkdir, delete):</p>
+  <ul>
+    <li><strong>Longest-Prefix Matching:</strong> When agent <em>S</em> requests operation <em>O</em> on path <em>P</em>, the effective permission is resolved by finding the longest matching rule prefix. More specific child directory rules strictly override broader parent permissions.</li>
+    <li><strong>Security Check Before Existence:</strong> Verifying authorization prior to path resolution ensures zero information leakage, preventing unauthorized agents from probing directory contents or mapping workspace structure.</li>
+    <li><strong>Optimistic Concurrency Control:</strong> Files maintain a monotonic version counter incremented on each successful write. Writes specifying an <code>expected_version</code> mismatch trigger an immediate <code>CONFLICT</code> status.</li>
+  </ul>
+
+  <h3>3.3 Literature Review Matrix</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Comparative Dimension</th>
+        <th>Omarchy Manual [O1–O4]</th>
+        <th>AIOS (Mei et al.) [A1]</th>
+        <th>MemGPT (Packer et al.) [A2]</th>
+        <th>AgentOS (This Study)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>System Category</strong></td>
+        <td>Linux Desktop Distribution</td>
+        <td>Research Agent Operating System</td>
+        <td>Virtual Context Management</td>
+        <td>Pedagogical OS Case Study</td>
+      </tr>
+      <tr>
+        <td><strong>Implementation Layer</strong></td>
+        <td>Arch Linux, Hyprland, Quickshell</td>
+        <td>Intermediate kernel between LLM & OS</td>
+        <td>Prompt context software library</td>
+        <td>Python deterministic discrete simulator</td>
+      </tr>
+      <tr>
+        <td><strong>Memory Management</strong></td>
+        <td>Linux kernel virtual memory, cgroups</td>
+        <td>Agent context scheduling & memory</td>
+        <td>Memory tiers (main vs. archival DB)</td>
+        <td>Demand paging (3 frames, FIFO vs. LRU)</td>
+      </tr>
+      <tr>
+        <td><strong>File System / ACL</strong></td>
+        <td>Standard POSIX permissions (ext4/Btrfs)</td>
+        <td>Tool cache & agent storage manager</td>
+        <td>Vector database document storage</td>
+        <td>In-memory tree with longest-prefix ACLs</td>
+      </tr>
+      <tr>
+        <td><strong>Multi-Tenancy</strong></td>
+        <td>Single user running agent launchers</td>
+        <td>Multi-agent process table & scheduler</td>
+        <td>Multi-session chat context</td>
+        <td>3 collaborative roles (Research, Coding, Report)</td>
+      </tr>
+      <tr>
+        <td><strong>Evaluation Focus</strong></td>
+        <td>Developer desktop usability</td>
+        <td>Token throughput & waiting time</td>
+        <td>Recall accuracy & multi-session depth</td>
+        <td>Verified hit ratios, Belady curve, ACL audit</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>4. Case Description</h2>
+
+  <h3>Table 1: Omarchy Source-Based Feature and Claim Ledger</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Manual Chapter</th>
+        <th>Documented Architectural Feature</th>
+        <th>Observable Design Choice</th>
+        <th>System Inference & AgentOS Boundary</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Welcome [O1]</strong></td>
+        <td>Arch Linux base with Hyprland and Quickshell</td>
+        <td>Lightweight tiling compositor with scriptable IPC</td>
+        <td>Provides an efficient GUI desktop; does not alter Linux kernel resource arbitration.</td>
+      </tr>
+      <tr>
+        <td><strong>AI [O2]</strong></td>
+        <td>Agent launchers, default agent selection, Omarchy skill</td>
+        <td>Desktop integration for multiple coding agents</td>
+        <td>Agents execute within the user's host environment; fine-grained per-role file access is not enforced.</td>
+      </tr>
+      <tr>
+        <td><strong>CLI [O3]</strong></td>
+        <td><code>omarchy</code> command-line management interface</td>
+        <td>Unified terminal entry point for desktop tools</td>
+        <td>Simplifies tool invocation; does not provide kernel-level process scheduling.</td>
+      </tr>
+      <tr>
+        <td><strong>Dotfiles [O4]</strong></td>
+        <td>Modular, user-editable dotfiles in Git repo</td>
+        <td>User-configurable system behavior</td>
+        <td>Dotfiles define workspace layout; concurrent agent write conflicts require external version control.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Table 2: Benchmark Reference Workloads</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Workload</th>
+        <th>Reference String</th>
+        <th>Length</th>
+        <th>Locality Profile & Theoretical Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Workload A</strong></td>
+        <td><code>[7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 0, 3, 2, 1, 2, 0, 1, 7, 0, 1]</code></td>
+        <td>22</td>
+        <td>Unit 4 Notes string; high temporal locality on {0, 2, 3}.</td>
+      </tr>
+      <tr>
+        <td><strong>Workload B</strong></td>
+        <td><code>[1, 2, 3, 1, 4, 2, 5, 1, 2, 3]</code></td>
+        <td>10</td>
+        <td>Mixed locality with rapid working set shift.</td>
+      </tr>
+      <tr>
+        <td><strong>Workload C</strong></td>
+        <td><code>[1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]</code></td>
+        <td>16</td>
+        <td>Cyclic loop with working set size W = 4 &gt; m = 3 (pure thrashing).</td>
+      </tr>
+      <tr>
+        <td><strong>Workload D</strong></td>
+        <td><code>[1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5]</code></td>
+        <td>12</td>
+        <td>Classic Belady reference string evaluated across 1 to 5 frames.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Table 3: Multi-Agent Access Control Matrix</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Path Prefix</th>
+        <th>Research Agent</th>
+        <th>Coding Agent</th>
+        <th>Report Agent</th>
+        <th>Rule Resolution Precedence</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>/workspace</code></td>
+        <td><code>r</code></td>
+        <td><code>r</code></td>
+        <td><code>r</code></td>
+        <td>Base inherited read permission</td>
+      </tr>
+      <tr>
+        <td><code>/workspace/notes</code></td>
+        <td><code>rwcd</code></td>
+        <td><code>r</code></td>
+        <td><code>r</code></td>
+        <td>Specific override (Research sandbox)</td>
+      </tr>
+      <tr>
+        <td><code>/workspace/results</code></td>
+        <td><code>r</code> (inherited)</td>
+        <td><code>rwcd</code></td>
+        <td><code>r</code></td>
+        <td>Specific override (Coding sandbox)</td>
+      </tr>
+      <tr>
+        <td><code>/workspace/reports</code></td>
+        <td><code>r</code> (inherited)</td>
+        <td><em>Denied</em></td>
+        <td><code>rwcd</code></td>
+        <td>Specific override (Report sandbox)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>5. Visual Analysis and Findings</h2>
+
+  <div class="figure-box">
+    <strong>[Figure 1: Belady's Anomaly Curve — Workload D, 1 to 5 Frames]</strong>
+    <div class="figure-caption">
+      <strong>Figure 1:</strong> Demonstrates that FIFO page faults increase from 9 to 10 when frames increase from 3 to 4, proving FIFO violates the stack inclusion property. LRU strictly decreases (10 → 8 → 5).<br>
+      <em>(Insert file: <code>outputs/visuals/belady_anomaly.png</code>)</em>
+    </div>
+  </div>
+
+  <p><strong>Empirical Proof:</strong> On Workload D, allocating 3 frames yields <strong>9 faults for FIFO</strong> and <strong>10 faults for LRU</strong>. When physical allocation is increased to 4 frames, FIFO faults <strong>increase to 10</strong> (+1 fault), while LRU faults decrease monotonically to <strong>8</strong>. At 5 frames, both converge to 5 faults.</p>
+  <p><strong>Analytical Finding:</strong> Figure 1 empirically proves that FIFO does not satisfy the inclusion property. Expanding physical memory for FIFO can paradoxically degrade hit rates. In contrast, LRU's strict monotonicity confirms its stack algorithm status.</p>
+
+  <div class="figure-box">
+    <strong>[Figure 2: Workload Sensitivity Comparison across Workloads A–D under 3 Frames]</strong>
+    <div class="figure-caption">
+      <strong>Figure 2:</strong> Performance comparison for FIFO and LRU across 4 distinct workloads under 3 frames.<br>
+      <em>(Insert file: <code>outputs/visuals/workload_comparison.png</code>)</em>
+    </div>
+  </div>
+
+  <h3>Table 4: Cross-Workload Performance Comparison (3 Frames)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Workload</th>
+        <th>FIFO Faults (Hit Ratio)</th>
+        <th>LRU Faults (Hit Ratio)</th>
+        <th>Winning Policy</th>
+        <th>Systems Explanation</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>A (Unit 4 Notes)</strong></td>
+        <td>15 (31.8%)</td>
+        <td><strong>12 (45.5%)</strong></td>
+        <td><strong>LRU (-3 faults)</strong></td>
+        <td>Repeated references to pages 0, 2, and 3 reward recency tracking.</td>
+      </tr>
+      <tr>
+        <td><strong>B (Short Mixed)</strong></td>
+        <td>8 (20.0%)</td>
+        <td>8 (20.0%)</td>
+        <td><strong>Tie</strong></td>
+        <td>Working set shifts too rapidly for recency caching to mature.</td>
+      </tr>
+      <tr>
+        <td><strong>C (Cyclic Loop)</strong></td>
+        <td>16 (0.0%)</td>
+        <td>16 (0.0%)</td>
+        <td><strong>Tie (Thrashing)</strong></td>
+        <td>Working set size (W = 4) exceeds capacity (m = 3); 100% miss rate.</td>
+      </tr>
+      <tr>
+        <td><strong>D (Belady String)</strong></td>
+        <td><strong>9 (25.0%)</strong></td>
+        <td>10 (16.7%)</td>
+        <td><strong>FIFO (-1 fault)</strong></td>
+        <td>LRU evicts a page whose re-reference occurs just before FIFO's victim.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="figure-box">
+    <strong>[Figure 3: Step-by-Step Frame Slot Divergence Trace (Steps 5 to 8)]</strong>
+    <div class="figure-caption">
+      <strong>Figure 3:</strong> Mechanical frame contents and eviction mechanics during the critical divergence window.<br>
+      <em>(Insert file: <code>outputs/visuals/memory_trace_divergence.png</code>)</em>
+    </div>
+  </div>
+
+  <p><strong>Analytical Finding:</strong> At Step 5, both algorithms experience a hit on Page 0. FIFO treats hits passively, preserving Page 0 as the oldest loaded page. LRU updates Page 0's recency timestamp. When Page 3 arrives at Step 6, FIFO evicts Page 0, causing an immediate fault at Step 7 when Page 0 is requested again. LRU preserves Page 0 and scores a hit.</p>
+
+  <div class="figure-box">
+    <strong>[Figures 4 & 5: Directory Protection Hierarchy and Operational Scenario Outcomes]</strong>
+    <div class="figure-caption">
+      <strong>Figure 4 & Figure 5:</strong> Longest-prefix matching access control tree and distribution of 15 simulated operations.<br>
+      <em>(Insert files: <code>outputs/visuals/file_system_tree_matrix.png</code> and <code>outputs/visuals/fs_outcomes.png</code>)</em>
+    </div>
+  </div>
+
+  <h3>Table 5: 15-Step Benchmark Scenario Audit Distribution</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Outcome Category</th>
+        <th>Count</th>
+        <th>Percentage</th>
+        <th>Architectural Function & Security Rationale</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Permitted (OK)</strong></td>
+        <td>10</td>
+        <td>66.7%</td>
+        <td>Legitimate collaborative pipeline operations (listing, reading, writing, searching).</td>
+      </tr>
+      <tr>
+        <td><strong>Denied (Security)</strong></td>
+        <td>2</td>
+        <td>13.3%</td>
+        <td>Unauthorized boundary violations blocked before existence checks (Steps 9 & 10).</td>
+      </tr>
+      <tr>
+        <td><strong>Invalid (Error)</strong></td>
+        <td>2</td>
+        <td>13.3%</td>
+        <td>Malformed relative paths (Step 12) and nonexistent paths (Step 11) safely caught.</td>
+      </tr>
+      <tr>
+        <td><strong>Stale Conflict</strong></td>
+        <td>1</td>
+        <td>6.7%</td>
+        <td>Optimistic concurrency version mismatch detected (Step 15), preventing lost updates.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>6. Implementation of the Visual & Evaluation Pipeline</h2>
+  <ul>
+    <li><strong>Automated Vector Generator (<code>generate_visuals.py</code>):</strong> Written in standard Python 3 using built-in libraries. Directly drives <code>memory_simulator.py</code> and <code>file_system_simulator.py</code> to calculate exact coordinate transforms from raw simulator traces, outputting scalable vector SVGs and PNG previews.</li>
+    <li><strong>Interactive Visual Laboratory (<code>outputs/visuals/index.html</code>):</strong> Unified multi-view workbench offering:
+      <ol>
+        <li><em>Visual Report View:</em> Clean presentation cards for all 5 figures.</li>
+        <li><em>File System & Security Workbench:</em> Expandable directory tree, node inode inspector, live interactive security rule sandbox, and filterable 15-step audit log.</li>
+        <li><em>Memory Simulator & Belady Arena:</em> Physical RAM bay with animated frame blocks and step timeline scrubbers.</li>
+      </ol>
+    </li>
+  </ul>
+
+  <h2>7. Results and Discussion — Integration Perspective</h2>
+
+  <h3>Table 6: Verified Program Output for Workload A (3 Frames)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Metric</th>
+        <th>FIFO Policy</th>
+        <th>LRU Policy</th>
+        <th>Delta / Comparative Impact</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Total References</strong></td>
+        <td>22</td>
+        <td>22</td>
+        <td>Identical input trace</td>
+      </tr>
+      <tr>
+        <td><strong>Physical Frames</strong></td>
+        <td>3</td>
+        <td>3</td>
+        <td>Identical memory constraints</td>
+      </tr>
+      <tr>
+        <td><strong>Page Hits</strong></td>
+        <td>7</td>
+        <td>10</td>
+        <td><strong>+3 hits for LRU (+42.9% relative increase)</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Page Faults</strong></td>
+        <td>15</td>
+        <td>12</td>
+        <td><strong>-3 faults for LRU (-20.0% relative reduction)</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Victim Evictions</strong></td>
+        <td>12</td>
+        <td>9</td>
+        <td><strong>-3 evictions for LRU (First 3 faults populate free frames)</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Page-Hit Ratio</strong></td>
+        <td><strong>0.3182 (31.8%)</strong></td>
+        <td><strong>0.4545 (45.5%)</strong></td>
+        <td><strong>+13.63 percentage point advantage for LRU</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Table 7: Evidence Ledger (Source Validation)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Statement / Claim</th>
+        <th>Supporting Evidence</th>
+        <th>Boundary / What Remains Simulated</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>FIFO incurs 15 faults, LRU incurs 12 on Workload A</td>
+        <td>Repository test <code>test_memory_simulator.py</code> passing</td>
+        <td>Confirms simulator output; does not reflect real hardware RAM paging.</td>
+      </tr>
+      <tr>
+        <td>Increasing frames from 3 to 4 increases FIFO faults (9 → 10)</td>
+        <td>Verified by <code>generate_visuals.py</code> and Figure 1</td>
+        <td>Mathematical property of Workload D; does not occur on all workloads.</td>
+      </tr>
+      <tr>
+        <td>Access control checks prevent existence leakage</td>
+        <td>Verified by <code>test_file_system_simulator.py</code></td>
+        <td>Simulated in Python; host OS filesystem is unmodified.</td>
+      </tr>
+      <tr>
+        <td>Omarchy integrates agent launchers on Arch Linux</td>
+        <td>Omarchy official manual [O1–O4]</td>
+        <td>Product feature; Omarchy does not implement custom kernel paging.</td>
+      </tr>
+      <tr>
+        <td>AIOS proposes agent kernel services</td>
+        <td>Mei et al. (COLM 2025) [A1]</td>
+        <td>Research paper; architecture distinct from AgentOS pedagogical scope.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Limitations</h3>
+  <ol>
+    <li><strong>Simplified Demand Paging:</strong> The simulation omits dirty-page writebacks, disk seek latency, TLBs, and hardware MMU translation.</li>
+    <li><strong>Abstract Page References:</strong> Page identifiers represent context tokens rather than physical memory pages.</li>
+    <li><strong>In-Memory File Nodes:</strong> Files exist as Python objects; physical disk fragmentation and journaling recovery are omitted.</li>
+  </ol>
+
+  <h2>8. Conclusion & Viva Defense Guide</h2>
+
+  <h3>8.1 Member 3 Contribution Summary</h3>
+  <ol>
+    <li>Unified the independent traces of Unit 4 and Unit 5 into an interconnected case study report.</li>
+    <li>Synthesized the documentary case study of Omarchy and established the academic literature review matrix.</li>
+    <li>Developed <code>generate_visuals.py</code> and exported Figures 1 to 5, providing reproducible visual proof of Belady's Anomaly, workload sensitivity, and frame divergence.</li>
+    <li>Engineered <code>outputs/visuals/index.html</code> into a functional, publication-grade visual laboratory.</li>
+    <li>Ensured 100% test reproducibility across all 42 test checks.</li>
+  </ol>
+
+  <h3>8.2 Viva Voce Defense Preparation (Key Questions & Answers)</h3>
+  <ul>
+    <li><strong>Q1: Why does LRU outperform FIFO on Workload A?</strong><br>
+    <em>Defense:</em> "On Workload A, pages 0, 2, and 3 are repeatedly revisited. At Step 5, Page 0 hits. LRU refreshes Page 0's recency timestamp, whereas FIFO ignores hits. Consequently, when Page 3 arrives at Step 6, FIFO evicts Page 0 while LRU retains it, yielding an immediate hit for LRU at Step 7."</li>
+    <li><strong>Q2: How does Figure 1 prove Belady's Anomaly?</strong><br>
+    <em>Defense:</em> "A stack algorithm requires <code>M(m, t) ⊆ M(m+1, t)</code>. On Workload D, increasing frames from 3 to 4 causes FIFO faults to jump from 9 to 10, violating inclusion. LRU's faults strictly drop from 10 to 8, proving LRU is a stack algorithm."</li>
+    <li><strong>Q3: How does AgentOS relate to Omarchy, AIOS, and MemGPT?</strong><br>
+    <em>Defense:</em> "Omarchy is a developer Linux desktop configured for agent tools. AIOS is a research proposal for an LLM agent OS kernel. MemGPT is prompt context tiering for LLMs. AgentOS is a bounded pedagogical simulation verifying classical Unit 4 and Unit 5 OS mechanisms."</li>
+  </ul>
+
+  <h2>9. References (APA 7)</h2>
+  <ul>
+    <li>[A1] Mei, K., Zhu, X., Xu, W., Hua, W., Jin, M., Li, Z., Xu, S., Ye, R., Ge, Y., & Zhang, Y. (2025). <em>AIOS: LLM agent operating system</em> (arXiv:2403.16971, version 5). arXiv. https://doi.org/10.48550/arXiv.2403.16971</li>
+    <li>[A2] Packer, C., Wooders, S., Lin, K., Fang, V., Patil, S. G., Stoica, I., & Gonzalez, J. E. (2023). <em>MemGPT: Towards LLMs as operating systems</em> (arXiv:2310.08560). arXiv. https://doi.org/10.48550/arXiv.2310.08560</li>
+    <li>[C1] Borhade, S. (n.d.). <em>Unit 4: Memory management</em> [Operating System lecture slides]. Department of AIML. Course-provided PDF, <code>SK_UNIT_4_OS _2026.pdf</code>.</li>
+    <li>[O1] Omarchy. (n.d.). <em>Welcome to Omarchy!</em> In <em>The manual</em>. Retrieved October 20, 2026, from https://omarchy.org/manual/</li>
+    <li>[O2] Omarchy. (n.d.). <em>AI</em>. In <em>The manual</em>. Retrieved October 20, 2026, from https://omarchy.org/manual/ai/</li>
+    <li>[O3] Omarchy. (n.d.). <em>Omarchy CLI</em>. In <em>The manual</em>. Retrieved October 20, 2026, from https://omarchy.org/manual/omarchy-cli/</li>
+    <li>[O4] Omarchy. (n.d.). <em>Dotfiles</em>. In <em>The manual</em>. Retrieved October 20, 2026, from https://omarchy.org/manual/dotfiles/</li>
+    <li>[P1] AgentOS Core Team. (n.d.). <em>AgentOS — Project specification and execution contract</em>. Unpublished course document.</li>
+  </ul>
+
+</body>
+</html>
