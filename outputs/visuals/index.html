@@ -1,0 +1,2834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentOS — Systems Architecture & Visual Laboratory</title>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Three.js + OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    :root {
+      --bg: #09090b;
+      --surface: #121215;
+      --surface-elevated: #18181b;
+      --surface-card: #18181b;
+      --border: #27272a;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --text: #fafafa;
+      --text-muted: #a1a1aa;
+      --text-subtle: #71717a;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --emerald: #10b981;
+      --emerald-subtle: rgba(16, 185, 129, 0.12);
+      --rose: #f43f5e;
+      --rose-subtle: rgba(244, 63, 94, 0.12);
+      --amber: #f59e0b;
+      --amber-subtle: rgba(245, 158, 11, 0.12);
+      --purple: #a855f7;
+      --purple-subtle: rgba(168, 85, 247, 0.12);
+      --cyan: #06b6d4;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      position: relative;
+      z-index: 50;
+      height: 56px;
+      background: rgba(9, 9, 11, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      flex-shrink: 0;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--surface-elevated);
+      color: var(--accent);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-title span {
+      color: var(--text-subtle);
+      font-weight: 400;
+    }
+
+    /* Tab Navigation */
+    .tab-group {
+      display: flex;
+      background: #18181b;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .tab-btn {
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: inherit;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+    }
+
+    .tab-btn.active {
+      background: #27272a;
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Main Viewport Container */
+    .app-body {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      height: calc(100vh - 56px);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 3D WebGL Canvas Layer */
+    #webgl-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      display: block;
+    }
+
+    /* 3D Simulation Overlay HUD */
+    .hud-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .hud-panels {
+      display: flex;
+      justify-content: space-between;
+      padding: 20px 24px;
+      pointer-events: none;
+    }
+
+    .sidebar-left, .sidebar-right {
+      width: 320px;
+      pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card {
+      background: rgba(18, 18, 21, 0.92);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.5);
+    }
+
+    .card-title {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .control-row {
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-subtle);
+    }
+
+    /* Segmented Controls */
+    .segmented-control {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: #18181b;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .workload-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      background: #18181b;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .workload-btn, .segment-btn {
+      padding: 6px 0;
+      font-size: 11.5px;
+      font-weight: 600;
+      font-family: inherit;
+      text-align: center;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .workload-btn {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .workload-btn:hover, .segment-btn:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .workload-btn.active, .segment-btn.active {
+      background: var(--surface-elevated);
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+
+    /* Action Buttons */
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .btn {
+      padding: 8px 4px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #18181b;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      background: #27272a;
+      border-color: #3f3f46;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    /* Stats Grid */
+    .stats-matrix {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat-card {
+      background: #18181b;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .stat-num {
+      font-size: 20px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 2px;
+      color: var(--text);
+    }
+
+    .stat-num.emerald { color: var(--emerald); }
+    .stat-num.rose { color: var(--rose); }
+    .stat-num.amber { color: var(--amber); }
+    .stat-num.purple { color: var(--purple); }
+
+    .stat-lbl {
+      font-size: 10px;
+      color: var(--text-subtle);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    /* Stream log */
+    .stream-container {
+      max-height: 180px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .stream-container::-webkit-scrollbar {
+      width: 4px;
+    }
+    .stream-container::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    .stream-item {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: #18181b;
+      border-left: 3px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .stream-item.hit { border-left-color: var(--emerald); }
+    .stream-item.fault { border-left-color: var(--rose); }
+    .stream-item.evict { border-left-color: var(--amber); }
+
+    /* Timeline footer */
+    footer.bottom-bar {
+      position: relative;
+      z-index: 10;
+      height: 64px;
+      background: rgba(9, 9, 11, 0.94);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 20px;
+      pointer-events: auto;
+      flex-shrink: 0;
+    }
+
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 170px;
+    }
+
+    .step-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      background: #18181b;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 6px;
+      color: var(--text);
+    }
+
+    .event-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-hit { background: var(--emerald-subtle); color: var(--emerald); }
+    .badge-fault { background: var(--rose-subtle); color: var(--rose); }
+
+    .timeline-strip {
+      flex: 1;
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 4px 0;
+      align-items: center;
+    }
+
+    .timeline-strip::-webkit-scrollbar {
+      height: 3px;
+    }
+    .timeline-strip::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    .ref-node {
+      min-width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: #18181b;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .ref-node:hover {
+      border-color: #52525b;
+      color: #ffffff;
+    }
+
+    .ref-node.active {
+      background: #ffffff;
+      color: #09090b;
+      font-weight: 700;
+      border-color: #ffffff;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+      transform: scale(1.08);
+    }
+
+    .ref-node.passed-hit {
+      border-color: rgba(16, 185, 129, 0.4);
+      color: var(--emerald);
+    }
+
+    .ref-node.passed-fault {
+      border-color: rgba(244, 63, 94, 0.4);
+      color: var(--rose);
+    }
+
+    .status-summary {
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      min-width: 320px;
+      text-align: right;
+    }
+
+    .status-summary strong {
+      color: var(--text);
+    }
+
+    /* =========================================================================
+       VIEW 1: FULL VISUAL REPORT (THE "ORIGINAL WEBSITE" RESTORED & ELEVATED)
+       ========================================================================= */
+    #view-report-cards {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 20;
+      overflow-y: auto;
+      background: var(--bg);
+      padding: 36px 24px 80px;
+    }
+
+    .report-container {
+      max-width: 1020px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 36px;
+    }
+
+    .report-header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 24px;
+    }
+
+    .report-pill {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(37, 99, 235, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(37, 99, 235, 0.3);
+      margin-bottom: 12px;
+    }
+
+    .report-title {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+
+    .report-subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .figure-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      transition: border-color 0.2s ease;
+    }
+
+    .figure-card:hover {
+      border-color: #3f3f46;
+    }
+
+    .figure-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.4);
+    }
+
+    .figure-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .figure-tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 6px;
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--amber);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .tag-blue {
+      background: rgba(37, 99, 235, 0.15);
+      color: #60a5fa;
+      border-color: rgba(37, 99, 235, 0.3);
+    }
+
+    .tag-green {
+      background: var(--emerald-subtle);
+      color: var(--emerald);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .figure-media {
+      padding: 24px;
+      background: #0d0e12;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .figure-media img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .figure-body {
+      padding: 20px 24px;
+      background: var(--surface-card);
+      border-top: 1px solid var(--border);
+    }
+
+    .caption-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .caption-text {
+      font-size: 14px;
+      color: #cbd5e1;
+      line-height: 1.6;
+    }
+
+    .caption-text strong {
+      color: #ffffff;
+    }
+
+    /* =========================================================================
+       VIEW 2: REAL, FUNCTIONAL FILE SYSTEM WORKBENCH (NO 3D SLOP)
+       ========================================================================= */
+    #view-filesystem-workbench {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 20;
+      overflow-y: auto;
+      background: var(--bg);
+      padding: 24px;
+    }
+
+    .fs-layout-grid {
+      display: grid;
+      grid-template-columns: 340px 1fr 380px;
+      gap: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+      height: calc(100vh - 56px - 48px);
+    }
+
+    @media (max-width: 1200px) {
+      .fs-layout-grid {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+    }
+
+    .fs-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    .fs-column::-webkit-scrollbar {
+      width: 4px;
+    }
+    .fs-column::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    .fs-box {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+    }
+
+    .fs-box-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    /* Agent access table */
+    .agent-matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .agent-matrix-table th {
+      text-align: left;
+      font-size: 11px;
+      color: var(--text-subtle);
+      padding: 6px 4px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .agent-matrix-table td {
+      padding: 8px 4px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .agent-select-pills {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .agent-pill-btn {
+      padding: 8px 0;
+      font-size: 11.5px;
+      font-weight: 600;
+      font-family: inherit;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #18181b;
+      color: var(--text-muted);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+
+    .agent-pill-btn:hover {
+      color: #ffffff;
+      border-color: #3f3f46;
+    }
+
+    .agent-pill-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    .perm-badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .perm-badge.rwcd { background: var(--emerald-subtle); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .perm-badge.r { background: rgba(37, 99, 235, 0.15); color: #60a5fa; border: 1px solid rgba(37, 99, 235, 0.3); }
+    .perm-badge.none { background: rgba(113, 113, 122, 0.15); color: var(--text-subtle); }
+
+    /* Interactive Tree View */
+    .fs-tree-container {
+      background: #0f1015;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .tree-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .tree-row:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tree-row.selected {
+      background: rgba(37, 99, 235, 0.2);
+      border: 1px solid rgba(37, 99, 235, 0.4);
+    }
+
+    .tree-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+    }
+
+    .tree-meta {
+      font-size: 11px;
+      color: var(--text-subtle);
+      display: flex;
+      gap: 8px;
+    }
+
+    .tree-meta span {
+      background: #18181b;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    /* Node Inspector Card */
+    .node-inspector {
+      background: #0f1015;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .inspector-prop {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+    }
+
+    .inspector-key {
+      color: var(--text-subtle);
+    }
+
+    .inspector-val {
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+
+    /* Security Sandbox Tester */
+    .test-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .test-select, .test-input {
+      width: 100%;
+      background: #0f1015;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: var(--text);
+      font-size: 12px;
+      font-family: inherit;
+    }
+
+    .test-select:focus, .test-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .test-feedback {
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      line-height: 1.5;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .test-feedback.ok {
+      background: var(--emerald-subtle);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+    }
+
+    .test-feedback.denied {
+      background: var(--rose-subtle);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      color: #fb7185;
+    }
+
+    .test-feedback.error {
+      background: var(--amber-subtle);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fcd34d;
+    }
+
+    .test-feedback.conflict {
+      background: var(--purple-subtle);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      color: #c084fc;
+    }
+
+    /* Audit Log Table */
+    .audit-filter-pills {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .audit-pill {
+      padding: 4px 10px;
+      font-size: 11px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: #18181b;
+      color: var(--text-subtle);
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .audit-pill.active {
+      background: #27272a;
+      color: #ffffff;
+      border-color: #3f3f46;
+    }
+
+    .audit-table-wrap {
+      flex: 1;
+      max-height: 380px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #0f1015;
+    }
+
+    .audit-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .audit-table th {
+      position: sticky;
+      top: 0;
+      background: #18181b;
+      padding: 8px 10px;
+      font-size: 10.5px;
+      text-align: left;
+      color: var(--text-subtle);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .audit-table td {
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .badge-status {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .badge-status.OK { background: var(--emerald-subtle); color: var(--emerald); }
+    .badge-status.DENIED { background: var(--rose-subtle); color: var(--rose); }
+    .badge-status.ERROR { background: var(--amber-subtle); color: var(--amber); }
+    .badge-status.CONFLICT { background: var(--purple-subtle); color: var(--purple); }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header>
+    <div class="brand-wrap">
+      <div class="brand-badge">SYSTEMS LAB</div>
+      <div class="brand-title">AgentOS <span>/ Architecture & Verification</span></div>
+    </div>
+
+    <div class="tab-group">
+      <button class="tab-btn active" data-mode="memory" onclick="switchMode('memory')">
+        <span>⚡</span> Memory Simulator (3D)
+      </button>
+      <button class="tab-btn" data-mode="belady" onclick="switchMode('belady')">
+        <span>📈</span> Belady's Anomaly (3D)
+      </button>
+      <button class="tab-btn" data-mode="filesystem" onclick="switchMode('filesystem')">
+        <span>🛡️</span> File System & Security Workbench
+      </button>
+    </div>
+
+    <div class="header-actions">
+      <span style="font-size: 12px; color: var(--text-subtle);">Member 3: Integration & Visuals</span>
+    </div>
+  </header>
+
+  <!-- Application Body -->
+  <div class="app-body">
+    <!-- 3D WebGL Canvas Layer -->
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- 3D HUD Overlay Layer (Active during Memory / Belady modes) -->
+    <div class="hud-layer" id="hud-layer" style="display: none;">
+      <div class="hud-panels">
+        
+        <!-- Left Sidebar: Controls -->
+        <aside class="sidebar-left">
+          
+          <!-- Memory Controls Panel -->
+          <div id="panel-memory-controls">
+            <div class="card">
+              <div class="card-title">
+                <span>Workload & Policy</span>
+                <span id="capacity-badge" style="font-size: 11px; color: var(--accent); font-family: 'JetBrains Mono', monospace; font-weight: 500;">3 Frames</span>
+              </div>
+
+              <div class="control-row">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                  <label>WORKLOAD TRACE</label>
+                  <span id="workload-desc" style="font-size: 11px; color: var(--accent); font-family: 'JetBrains Mono', monospace; font-weight: 500;">Unit 4 (22 refs)</span>
+                </div>
+                <div class="workload-grid">
+                  <button class="workload-btn active" data-w="A" onclick="setWorkload('A')">A</button>
+                  <button class="workload-btn" data-w="B" onclick="setWorkload('B')">B</button>
+                  <button class="workload-btn" data-w="C" onclick="setWorkload('C')">C</button>
+                  <button class="workload-btn" data-w="D" onclick="setWorkload('D')">D</button>
+                </div>
+              </div>
+
+              <div class="control-row">
+                <label>FRAME CAPACITY</label>
+                <div class="segmented-control">
+                  <button id="btn-cap-3" class="segment-btn active" onclick="setCapacity(3)">3 Frames</button>
+                  <button id="btn-cap-4" class="segment-btn" onclick="setCapacity(4)">4 Frames</button>
+                </div>
+              </div>
+
+              <div class="control-row">
+                <label>REPLACEMENT ALGORITHM</label>
+                <div class="segmented-control">
+                  <button id="btn-fifo" class="segment-btn" onclick="setAlgorithm('FIFO')">FIFO</button>
+                  <button id="btn-lru" class="segment-btn active" onclick="setAlgorithm('LRU')">LRU</button>
+                </div>
+              </div>
+
+              <div class="button-grid">
+                <button class="btn" onclick="stepBack()" title="Step Back (Left Arrow)">Back</button>
+                <button id="play-btn" class="btn btn-primary" onclick="togglePlayback()" title="Play / Pause (Space)">Play</button>
+                <button class="btn" onclick="stepForward()" title="Step Forward (Right Arrow)">Next</button>
+                <button class="btn" onclick="resetSimulation()" title="Reset (R)">Reset</button>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top: 12px;">
+              <div class="card-title">
+                <span>3D Camera Navigation</span>
+              </div>
+              <div style="font-size: 11.5px; color: var(--text-subtle); line-height: 1.6;">
+                <div><strong style="color: var(--text-muted);">Rotate:</strong> Left click + drag</div>
+                <div><strong style="color: var(--text-muted);">Pan:</strong> Right click + drag</div>
+                <div><strong style="color: var(--text-muted);">Zoom:</strong> Scroll wheel</div>
+                <div><strong style="color: var(--text-muted);">Scrub:</strong> Click any step node in timeline</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Belady Controls Panel -->
+          <div id="panel-belady-controls" style="display: none;">
+            <div class="card">
+              <div class="card-title">
+                <span>Belady's Anomaly Lab</span>
+                <span style="font-size: 11px; color: var(--rose); font-weight: 700;">Unit 4 Verification</span>
+              </div>
+
+              <div class="control-row">
+                <label>VIEW MODE</label>
+                <div class="segmented-control">
+                  <button id="btn-belady-view-sim" class="segment-btn active" onclick="setBeladySubMode('sim')">⚡ Dual Trace (3 vs 4)</button>
+                  <button id="btn-belady-view-arena" class="segment-btn" onclick="setBeladySubMode('arena')">📊 3D Arena (1-5)</button>
+                </div>
+              </div>
+
+              <!-- Sim Controls (Active in 'sim' mode) -->
+              <div id="belady-sim-controls">
+                <div class="control-row">
+                  <label>REPLACEMENT POLICY</label>
+                  <div class="segmented-control">
+                    <button id="btn-belady-algo-fifo" class="segment-btn active" onclick="setBeladyAlgo('FIFO')">FIFO (Anomaly)</button>
+                    <button id="btn-belady-algo-lru" class="segment-btn" onclick="setBeladyAlgo('LRU')">LRU (Monotonic)</button>
+                  </div>
+                </div>
+
+                <div class="button-grid">
+                  <button class="btn" onclick="beladyStepBack()" title="Step Back">Back</button>
+                  <button id="belady-play-btn" class="btn btn-primary" onclick="beladyTogglePlayback()" title="Play / Pause">Play</button>
+                  <button class="btn" onclick="beladyStepForward()" title="Step Forward">Next</button>
+                  <button class="btn" onclick="beladyReset()" title="Reset">Reset</button>
+                </div>
+
+                <div style="margin-top: 8px;">
+                  <button class="btn" style="width: 100%; border-color: var(--rose); color: var(--rose); font-weight: 600; background: rgba(244, 63, 94, 0.1);" onclick="beladyJumpToAnomaly()">
+                    ⚡ Jump to Step 8 (Anomaly Flashpoint)
+                  </button>
+                </div>
+              </div>
+
+              <!-- Arena Controls (Active in 'arena' mode) -->
+              <div id="belady-arena-controls" style="display: none;">
+                <div class="control-row">
+                  <label>CAMERA ANGLE PRESETS</label>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                    <button class="btn" onclick="setBeladyCamera('overview')">Panoramic</button>
+                    <button class="btn" onclick="setBeladyCamera('anomaly')">Focus Anomaly</button>
+                    <button class="btn" onclick="setBeladyCamera('top')">Top View</button>
+                    <button class="btn" onclick="setBeladyCamera('side')">Side Angle</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Theory Card -->
+            <div class="card" style="margin-top: 12px;">
+              <div class="card-title">
+                <span>Theoretical Foundation</span>
+              </div>
+              <div style="font-size: 11.5px; color: var(--text-subtle); line-height: 1.6;">
+                <div>• <strong>Workload D:</strong> <code style="color: var(--accent); font-family: 'JetBrains Mono', monospace;">[1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5]</code></div>
+                <div style="margin-top: 4px;">• <strong>Stack Property:</strong> \(M(m) \subseteq M(m+1)\). Satisfied by LRU, violated by FIFO.</div>
+                <div style="margin-top: 4px;">• <strong>Step 8 Anomaly:</strong> Page 1 was evicted from 4-frame FIFO at Step 7, causing a FAULT on Step 8 where 3-frame FIFO achieved a HIT!</div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top: 12px;">
+              <div class="card-title">
+                <span>3D Navigation</span>
+              </div>
+              <div style="font-size: 11px; color: var(--text-subtle); line-height: 1.6;">
+                <div><strong style="color: var(--text-muted);">Rotate:</strong> Left click + drag</div>
+                <div><strong style="color: var(--text-muted);">Pan:</strong> Right click + drag</div>
+                <div><strong style="color: var(--text-muted);">Zoom:</strong> Scroll wheel</div>
+                <div><strong style="color: var(--text-muted);">Scrub:</strong> Click any step in bottom timeline</div>
+              </div>
+            </div>
+          </div>
+
+        </aside>
+
+        <!-- Right Sidebar: Telemetry -->
+        <aside class="sidebar-right">
+          
+          <!-- Memory Telemetry Panel -->
+          <div id="panel-memory-telemetry">
+            <div class="card">
+              <div class="card-title">
+                <span>Execution Telemetry</span>
+                <span id="active-algo-label" style="font-size: 11px; color: var(--accent); font-weight: 600;">LRU</span>
+              </div>
+
+              <div class="stats-matrix">
+                <div class="stat-card">
+                  <div class="stat-num emerald" id="stat-hits">0</div>
+                  <div class="stat-lbl">Page Hits</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-num rose" id="stat-faults">0</div>
+                  <div class="stat-lbl">Page Faults</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-num" id="stat-evictions">0</div>
+                  <div class="stat-lbl">Evictions</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-num" id="stat-hitratio">0.0%</div>
+                  <div class="stat-lbl">Hit Ratio</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top: 12px;">
+              <div class="card-title">
+                <span>Paging Event Stream</span>
+              </div>
+              <div class="stream-container" id="stream-container">
+                <div class="stream-item">
+                  <span>Environment initialized</span>
+                  <span style="color: var(--text-subtle);">Ready</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Belady Telemetry Panel -->
+          <div id="panel-belady-telemetry" style="display: none;">
+            
+            <!-- Live Dual Telemetry Matrix (Sim Mode) -->
+            <div id="belady-sim-telemetry">
+              <div class="card">
+                <div class="card-title">
+                  <span>Dual Execution Telemetry</span>
+                  <span id="belady-status-badge" class="event-badge badge-fault" style="font-size: 10px;">STEP 0</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+                  <!-- 3 Frames Column -->
+                  <div style="background: #18181b; border: 1px solid var(--border); border-radius: 6px; padding: 8px;">
+                    <div style="font-size: 11px; font-weight: 700; color: #ffffff; border-bottom: 1px solid var(--border-subtle); padding-bottom: 4px; display: flex; justify-content: space-between;">
+                      <span>3 FRAMES</span>
+                      <span id="belady-event-3" style="color: var(--rose);">FAULT</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px; text-align: center;">
+                      <div>
+                        <div id="belady-faults-3" style="font-size: 18px; font-weight: 700; color: var(--rose); font-family: 'JetBrains Mono', monospace;">0</div>
+                        <div style="font-size: 9.5px; color: var(--text-subtle);">Faults</div>
+                      </div>
+                      <div>
+                        <div id="belady-hits-3" style="font-size: 18px; font-weight: 700; color: var(--emerald); font-family: 'JetBrains Mono', monospace;">0</div>
+                        <div style="font-size: 9.5px; color: var(--text-subtle);">Hits</div>
+                      </div>
+                    </div>
+                    <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 6px; font-family: 'JetBrains Mono', monospace;">
+                      RAM: <span id="belady-ram-3" style="color: #ffffff;">[ - , - , - ]</span>
+                    </div>
+                  </div>
+
+                  <!-- 4 Frames Column -->
+                  <div style="background: #18181b; border: 1px solid var(--border); border-radius: 6px; padding: 8px;">
+                    <div style="font-size: 11px; font-weight: 700; color: #ffffff; border-bottom: 1px solid var(--border-subtle); padding-bottom: 4px; display: flex; justify-content: space-between;">
+                      <span>4 FRAMES</span>
+                      <span id="belady-event-4" style="color: var(--rose);">FAULT</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px; text-align: center;">
+                      <div>
+                        <div id="belady-faults-4" style="font-size: 18px; font-weight: 700; color: var(--rose); font-family: 'JetBrains Mono', monospace;">0</div>
+                        <div style="font-size: 9.5px; color: var(--text-subtle);">Faults</div>
+                      </div>
+                      <div>
+                        <div id="belady-hits-4" style="font-size: 18px; font-weight: 700; color: var(--emerald); font-family: 'JetBrains Mono', monospace;">0</div>
+                        <div style="font-size: 9.5px; color: var(--text-subtle);">Hits</div>
+                      </div>
+                    </div>
+                    <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 6px; font-family: 'JetBrains Mono', monospace;">
+                      RAM: <span id="belady-ram-4" style="color: #ffffff;">[ - , - , - , - ]</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Divergence Callout Banner -->
+                <div id="belady-divergence-banner" style="margin-top: 10px; padding: 8px; border-radius: 6px; font-size: 11.5px; line-height: 1.4; background: rgba(39, 39, 42, 0.5); border: 1px solid var(--border); color: var(--text-muted);">
+                  Step through Workload D to observe 3-Frame vs 4-Frame cache behavior.
+                </div>
+              </div>
+
+              <!-- Step Divergence Table -->
+              <div class="card" style="margin-top: 12px;">
+                <div class="card-title">
+                  <span>Step-by-Step Divergence</span>
+                </div>
+                <div style="max-height: 240px; overflow-y: auto;">
+                  <table id="belady-step-table" style="width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'JetBrains Mono', monospace;">
+                    <tr style="color: var(--text-subtle); border-bottom: 1px solid var(--border);">
+                      <th style="padding: 4px 2px; text-align: left;">#</th>
+                      <th style="padding: 4px 2px; text-align: center;">Ref</th>
+                      <th style="padding: 4px 2px; text-align: center;">3 Frames</th>
+                      <th style="padding: 4px 2px; text-align: center;">4 Frames</th>
+                      <th style="padding: 4px 2px; text-align: right;">Status</th>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Capacity Sweep (Arena Mode) -->
+            <div id="belady-arena-telemetry" style="display: none;">
+              <div class="card">
+                <div class="card-title">
+                  <span>Capacity Sweep (1 to 5)</span>
+                  <span style="font-size: 11px; color: var(--accent);">Workload D</span>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; font-family: 'JetBrains Mono', monospace;">
+                  <tr style="color: var(--text-subtle); border-bottom: 1px solid var(--border);">
+                    <th style="padding: 6px 4px; text-align: left;">Frames</th>
+                    <th style="padding: 6px 4px; text-align: left;">FIFO Faults</th>
+                    <th style="padding: 6px 4px; text-align: left;">LRU Faults</th>
+                  </tr>
+                  <tr style="border-bottom: 1px solid var(--border-subtle);"><td style="padding: 6px 4px;">1 Frame</td><td>12</td><td>12</td></tr>
+                  <tr style="border-bottom: 1px solid var(--border-subtle);"><td style="padding: 6px 4px;">2 Frames</td><td>12</td><td>12</td></tr>
+                  <tr style="border-bottom: 1px solid var(--border-subtle);"><td style="padding: 6px 4px;">3 Frames</td><td style="color: var(--amber);">9</td><td>10</td></tr>
+                  <tr style="background: rgba(244, 63, 94, 0.12); border-bottom: 1px solid var(--border-subtle);">
+                    <td style="padding: 6px 4px;"><strong>4 Frames</strong></td>
+                    <td style="color: var(--rose); font-weight: 700;">10 ⚠️ (Anomaly)</td>
+                    <td style="color: var(--emerald); font-weight: 700;">8 ✓</td>
+                  </tr>
+                  <tr><td style="padding: 6px 4px;">5 Frames</td><td>5</td><td>5</td></tr>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+        </aside>
+
+      </div>
+
+      <!-- Bottom Timeline & Status Footer -->
+      <footer class="bottom-bar">
+        <div class="step-indicator" id="footer-step-indicator">
+          <div class="step-pill" id="step-pill">STEP 0 / 22</div>
+          <div id="event-badge" class="event-badge badge-fault" style="display: none;">FAULT</div>
+        </div>
+
+        <div class="timeline-strip" id="timeline-strip">
+          <!-- Injected by JavaScript -->
+        </div>
+
+        <div class="status-summary" id="status-summary">
+          Click <strong>Play</strong> or select a reference node to inspect frame residency.
+        </div>
+      </footer>
+    </div>
+
+
+
+    <!-- =========================================================================
+         VIEW 3: REAL, FUNCTIONAL FILE SYSTEM WORKBENCH (USABLE, SHARP, NO 3D SLOP)
+         ========================================================================= -->
+    <div id="view-filesystem-workbench">
+      <div class="fs-layout-grid">
+        
+        <!-- Left Column: Agent Access Matrix & Rules -->
+        <div class="fs-column">
+          <div class="fs-box">
+            <div class="fs-box-title">
+              <span>Agent Protection Rules</span>
+              <span class="perm-badge rwcd">Prefix Match</span>
+            </div>
+
+            <label style="margin-bottom: 6px; display: block;">SELECT AGENT ROLE</label>
+            <div class="agent-select-pills">
+              <button class="agent-pill-btn active" id="btn-agent-research" onclick="selectFsAgent('Research Agent')">Research</button>
+              <button class="agent-pill-btn" id="btn-agent-coding" onclick="selectFsAgent('Coding Agent')">Coding</button>
+              <button class="agent-pill-btn" id="btn-agent-report" onclick="selectFsAgent('Report Agent')">Report</button>
+            </div>
+
+            <table class="agent-matrix-table">
+              <thead>
+                <tr>
+                  <th>Path Prefix</th>
+                  <th>Rights</th>
+                  <th>Type</th>
+                </tr>
+              </thead>
+              <tbody id="agent-matrix-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+
+            <div style="font-size: 11px; color: var(--text-subtle); margin-top: 12px; line-height: 1.5;">
+              <strong style="color: var(--text-muted);">Permission Grammar:</strong><br>
+              <code>r</code>: read/list/stat &bull; <code>w</code>: write/overwrite<br>
+              <code>c</code>: create/mkdir &bull; <code>d</code>: delete file/dir
+            </div>
+          </div>
+
+          <!-- Security Invariants Box -->
+          <div class="fs-box">
+            <div class="fs-box-title">
+              <span>Security Invariants</span>
+            </div>
+            <div style="font-size: 11.5px; color: var(--text-muted); line-height: 1.6; display: flex; flex-direction: column; gap: 8px;">
+              <div>
+                <strong style="color: #60a5fa;">1. Zero Information Leakage:</strong>
+                Protection rules are evaluated <em>before</em> path existence resolution. An unauthorized agent gets <code>DENIED</code> without discovering whether a file exists.
+              </div>
+              <div>
+                <strong style="color: var(--emerald);">2. Longest-Prefix Specificity:</strong>
+                More specific path prefixes override broader root permissions (e.g. <code>/workspace/notes</code> overrides <code>/workspace</code>).
+              </div>
+              <div>
+                <strong style="color: var(--purple);">3. Optimistic Concurrency:</strong>
+                Writes enforce optional version matching to eliminate lost updates in shared agent workspaces.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Center Column: Directory Tree Explorer & Inode Inspector -->
+        <div class="fs-column">
+          <div class="fs-box">
+            <div class="fs-box-title">
+              <span>Simulated Directory Tree</span>
+              <span style="font-size: 11px; color: var(--text-subtle);">Click node to inspect</span>
+            </div>
+
+            <div class="fs-tree-container" id="tree-container">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Inode & Access Card -->
+          <div class="fs-box">
+            <div class="fs-box-title">
+              <span>Selected Node Inode & Rights</span>
+              <span id="selected-node-tag" class="perm-badge r">/workspace</span>
+            </div>
+
+            <div class="node-inspector" id="node-inspector-content">
+              <div class="inspector-prop">
+                <span class="inspector-key">Absolute Path:</span>
+                <span class="inspector-val" id="insp-path">/workspace</span>
+              </div>
+              <div class="inspector-prop">
+                <span class="inspector-key">Node Type:</span>
+                <span class="inspector-val" id="insp-type">Directory</span>
+              </div>
+              <div class="inspector-prop">
+                <span class="inspector-key">Owner:</span>
+                <span class="inspector-val" id="insp-owner">system</span>
+              </div>
+              <div class="inspector-prop">
+                <span class="inspector-key">Size:</span>
+                <span class="inspector-val" id="insp-size">0 bytes</span>
+              </div>
+              <div class="inspector-prop">
+                <span class="inspector-key">Current Version:</span>
+                <span class="inspector-val" id="insp-version">v1</span>
+              </div>
+
+              <div style="margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--border-subtle);">
+                <span style="font-size: 11px; color: var(--text-subtle); display: block; margin-bottom: 6px;">EFFECTIVE PERMISSIONS ACROSS AGENTS:</span>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;" id="insp-agent-rights">
+                  <!-- Dynamically rendered -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Security Sandbox Tester -->
+          <div class="fs-box">
+            <div class="fs-box-title">
+              <span>Interactive Security Rule Evaluator</span>
+              <span style="font-size: 11px; color: var(--cyan);">Live Engine</span>
+            </div>
+
+            <div class="test-form">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <div>
+                  <label>AGENT</label>
+                  <select id="sandbox-agent" class="test-select">
+                    <option value="Research Agent">Research Agent</option>
+                    <option value="Coding Agent">Coding Agent</option>
+                    <option value="Report Agent">Report Agent</option>
+                  </select>
+                </div>
+                <div>
+                  <label>OPERATION</label>
+                  <select id="sandbox-op" class="test-select">
+                    <option value="read">read (requires 'r')</option>
+                    <option value="write">write (requires 'w')</option>
+                    <option value="create">create (requires 'c')</option>
+                    <option value="delete">delete (requires 'd')</option>
+                    <option value="list">list (requires 'r')</option>
+                    <option value="stat">stat (requires 'r')</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label>TARGET PATH</label>
+                <select id="sandbox-path" class="test-select">
+                  <option value="/workspace/notes/source_notes.txt">/workspace/notes/source_notes.txt</option>
+                  <option value="/workspace/results/results.csv">/workspace/results/results.csv</option>
+                  <option value="/workspace/reports/final_report.md">/workspace/reports/final_report.md</option>
+                  <option value="/workspace/notes">/workspace/notes (Directory)</option>
+                  <option value="/workspace/results">/workspace/results (Directory)</option>
+                  <option value="/workspace/reports">/workspace/reports (Directory)</option>
+                  <option value="/workspace/reports/unauthorized_leak.doc">/workspace/reports/unauthorized_leak.doc (Missing Path)</option>
+                </select>
+              </div>
+
+              <button class="btn btn-primary" onclick="runSandboxTest()" style="margin-top: 4px; padding: 10px;">
+                Execute Security Check
+              </button>
+
+              <div id="sandbox-feedback" class="test-feedback">
+                <!-- Injected feedback -->
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Operational Outcomes & Filterable Audit Stream -->
+        <div class="fs-column">
+          <div class="fs-box">
+            <div class="fs-box-title">
+              <span>Scenario Outcomes</span>
+              <span style="font-size: 11px; color: var(--emerald);">15 Operations</span>
+            </div>
+
+            <div class="stats-matrix">
+              <div class="stat-card">
+                <div class="stat-num emerald">10</div>
+                <div class="stat-lbl">Permitted (OK)</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-num rose">2</div>
+                <div class="stat-lbl">Denied (Security)</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-num amber">2</div>
+                <div class="stat-lbl">Invalid (Error)</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-num purple">1</div>
+                <div class="stat-lbl">Stale Conflict</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="fs-box" style="flex: 1; display: flex; flex-direction: column;">
+            <div class="fs-box-title">
+              <span>Operational Audit Log</span>
+              <span style="font-size: 11px; color: var(--text-subtle);">Unit 5 Benchmark Trace</span>
+            </div>
+
+            <div class="audit-filter-pills">
+              <button class="audit-pill active" onclick="filterAudit('ALL')">All (15)</button>
+              <button class="audit-pill" onclick="filterAudit('OK')">OK (10)</button>
+              <button class="audit-pill" onclick="filterAudit('DENIED')">Denied (2)</button>
+              <button class="audit-pill" onclick="filterAudit('ERROR')">Error (2)</button>
+              <button class="audit-pill" onclick="filterAudit('CONFLICT')">Conflict (1)</button>
+            </div>
+
+            <div class="audit-table-wrap">
+              <table class="audit-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Agent</th>
+                    <th>Op</th>
+                    <th>Status</th>
+                    <th>Path</th>
+                  </tr>
+                </thead>
+                <tbody id="fs-audit-rows">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    // =========================================================================
+    // Simulation Trace Data (Exact AgentOS Unit 4 & Unit 5 Benchmarks)
+    // =========================================================================
+    const WORKLOADS = {
+      A: [7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 0, 3, 2, 1, 2, 0, 1, 7, 0, 1],
+      B: [0, 1, 2, 3, 0, 1, 4, 0, 1, 2],
+      C: [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+      D: [1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5]
+    };
+
+    const WORKLOAD_LABELS = {
+      A: "Unit 4 Notes (22 refs)",
+      B: "Short Mixed (10 refs)",
+      C: "Cyclic Loop (16 refs)",
+      D: "Belady Sequence (12 refs)"
+    };
+
+    let activeKey = 'A';
+    let activeRefs = WORKLOADS[activeKey];
+    let activeAlgo = 'LRU';
+    let currentStep = 0;
+    let isRunning = false;
+    let timer = null;
+
+    // =========================================================================
+    // Pure Simulator Logic (Paging)
+    // =========================================================================
+    function simulateTrace(refs, algo, capacity = 3) {
+      const history = [];
+      let frames = [];
+      let hits = 0;
+      let faults = 0;
+      let evictions = 0;
+      let usageOrder = [];
+
+      for (let i = 0; i < refs.length; i++) {
+        const page = refs[i];
+        let event = 'HIT';
+        let evictedPage = null;
+
+        if (frames.includes(page)) {
+          hits++;
+          if (algo === 'LRU') {
+            usageOrder = usageOrder.filter(p => p !== page);
+            usageOrder.push(page);
+          }
+        } else {
+          faults++;
+          event = 'FAULT';
+          if (frames.length < capacity) {
+            frames.push(page);
+            usageOrder.push(page);
+          } else {
+            evictions++;
+            if (algo === 'FIFO') {
+              evictedPage = frames.shift();
+              frames.push(page);
+            } else {
+              evictedPage = usageOrder.shift();
+              const idx = frames.indexOf(evictedPage);
+              frames.splice(idx, 1, page);
+              usageOrder.push(page);
+            }
+          }
+        }
+
+        history.push({
+          step: i + 1,
+          page,
+          event,
+          evictedPage,
+          frames: [...frames],
+          hits,
+          faults,
+          evictions,
+          hitRatio: ((hits / (i + 1)) * 100).toFixed(1)
+        });
+      }
+      return history;
+    }
+
+    let activeHistory = simulateTrace(activeRefs, activeAlgo, 3);
+
+    // =========================================================================
+    // Three.js 3D WebGL Canvas Engine (RAM Slots & Belady Arena Only)
+    // =========================================================================
+    const canvas = document.getElementById('webgl-canvas');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x09090b);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 9.5, 13.5);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxPolarAngle = Math.PI / 2 - 0.05;
+    controls.minDistance = 5;
+    controls.maxDistance = 40;
+    controls.target.set(0, 0.8, 0);
+
+    // Grid Floor
+    const gridHelper = new THREE.GridHelper(30, 30, 0x27272a, 0x18181b);
+    gridHelper.position.y = -0.01;
+    scene.add(gridHelper);
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(10, 20, 10);
+    scene.add(dirLight);
+
+    // Scene Groups
+    const grpMemory = new THREE.Group();
+    const grpBelady = new THREE.Group();
+    scene.add(grpMemory);
+    scene.add(grpBelady);
+    grpBelady.visible = false;
+
+    // Helper: Dynamic Canvas Texture for crisp 3D labels
+    function createBoxTexture(text, subtext = "", status = "idle") {
+      const cv = document.createElement('canvas');
+      cv.width = 512;
+      cv.height = 512;
+      const ctx = cv.getContext('2d');
+
+      ctx.fillStyle = status === 'hit' ? '#064e3b' : (status === 'fault' ? '#881337' : '#18181b');
+      ctx.fillRect(0, 0, 512, 512);
+
+      ctx.strokeStyle = status === 'hit' ? '#10b981' : (status === 'fault' ? '#f43f5e' : '#3f3f46');
+      ctx.lineWidth = 16;
+      ctx.strokeRect(8, 8, 496, 496);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 160px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 256, 230);
+
+      if (subtext) {
+        ctx.fillStyle = status === 'hit' ? '#34d399' : (status === 'fault' ? '#fb7185' : '#a1a1aa');
+        ctx.font = 'bold 44px "Inter", sans-serif';
+        ctx.fillText(subtext, 256, 380);
+      }
+
+      return new THREE.CanvasTexture(cv);
+    }
+
+    // Helper: Dynamic Canvas Texture Sprite for crisp 3D floating labels
+    function createLabelSprite(text, subtext = "", color = "#ffffff", bgColor = "rgba(24, 24, 27, 0.9)", borderColor = "#3f3f46") {
+      const cv = document.createElement('canvas');
+      cv.width = 512;
+      cv.height = 256;
+      const ctx = cv.getContext('2d');
+
+      ctx.fillStyle = bgColor;
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.roundRect(10, 10, 492, 236, 28);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = color;
+      ctx.font = 'bold 76px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 256, subtext ? 95 : 128);
+
+      if (subtext) {
+        ctx.fillStyle = '#a1a1aa';
+        ctx.font = 'bold 36px "Inter", sans-serif';
+        ctx.fillText(subtext, 256, 175);
+      }
+
+      const texture = new THREE.CanvasTexture(cv);
+      const mat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(2.4, 1.2, 1);
+      return sprite;
+    }
+
+    // Camera preset switcher for Belady 3D Arena
+    function setBeladyCamera(view) {
+      if (view === 'overview') {
+        camera.position.set(0, 9.5, 17);
+        controls.target.set(0, 3.2, 0);
+      } else if (view === 'anomaly') {
+        camera.position.set(3.6, 6.0, 9.0);
+        controls.target.set(3.6, 3.0, 0);
+      } else if (view === 'top') {
+        camera.position.set(0, 18, 0.1);
+        controls.target.set(0, 0, 0);
+      } else if (view === 'side') {
+        camera.position.set(-15, 6, 0);
+        controls.target.set(0, 2.5, 0);
+      }
+      controls.update();
+    }
+
+    // 1. Build Physical RAM Bay (Dynamic Capacity 3 or 4)
+    let activeCapacity = 3;
+    const frameMeshes = [];
+    const frameBases = [];
+
+    function buildMemoryBay(cap = activeCapacity) {
+      while (grpMemory.children.length > 0) {
+        grpMemory.remove(grpMemory.children[0]);
+      }
+      frameMeshes.length = 0;
+      frameBases.length = 0;
+
+      const frameWidth = (cap === 4) ? 2.0 : 2.4;
+      const gap = (cap === 4) ? 0.6 : 0.8;
+      const totalBayWidth = cap * (frameWidth + gap) + 1.2;
+
+      const bayPlate = new THREE.Mesh(
+        new THREE.BoxGeometry(totalBayWidth, 0.2, 4.5),
+        new THREE.MeshStandardMaterial({ color: 0x121215, roughness: 0.8, metalness: 0.2 })
+      );
+      bayPlate.position.set(0, 0.1, 0);
+      grpMemory.add(bayPlate);
+
+      const startX = -((cap * frameWidth + (cap - 1) * gap) / 2) + frameWidth / 2;
+
+      for (let i = 0; i < cap; i++) {
+        const xPos = startX + i * (frameWidth + gap);
+
+        const baseMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.7 });
+        const base = new THREE.Mesh(new THREE.BoxGeometry(frameWidth, 0.25, 3.2), baseMat);
+        base.position.set(xPos, 0.2, 0);
+        grpMemory.add(base);
+        frameBases.push(base);
+
+        const cubeGeo = new THREE.BoxGeometry(frameWidth * 0.88, 1.8, 2.7);
+        const cubeMat = new THREE.MeshStandardMaterial({
+          map: createBoxTexture("-", `SLOT ${i}`, "idle"),
+          roughness: 0.3
+        });
+        const cube = new THREE.Mesh(cubeGeo, cubeMat);
+        cube.position.set(xPos, 1.25, 0);
+        cube.visible = false;
+        grpMemory.add(cube);
+        frameMeshes.push(cube);
+      }
+    }
+
+    function setCapacity(cap) {
+      activeCapacity = cap;
+      document.getElementById('btn-cap-3').className = `segment-btn ${cap === 3 ? 'active' : ''}`;
+      document.getElementById('btn-cap-4').className = `segment-btn ${cap === 4 ? 'active' : ''}`;
+      const badge = document.getElementById('capacity-badge');
+      if (badge) badge.textContent = `${cap} Frames`;
+      buildMemoryBay(cap);
+      resetSimulation();
+      syncSimulation();
+    }
+
+    // 2. Build Belady Anomaly Sub-groups (Arena & Dual Sim)
+    const grpBeladyArena = new THREE.Group();
+    const grpBeladySim = new THREE.Group();
+    grpBelady.add(grpBeladyArena);
+    grpBelady.add(grpBeladySim);
+
+    const frameMeshesBelady3 = [];
+    const frameMeshesBelady4 = [];
+
+    function buildBeladySimBays() {
+      while (grpBeladySim.children.length > 0) {
+        grpBeladySim.remove(grpBeladySim.children[0]);
+      }
+      frameMeshesBelady3.length = 0;
+      frameMeshesBelady4.length = 0;
+
+      // Left: 3-Frame Bay (X = -5.8)
+      const bay3Plate = new THREE.Mesh(
+        new THREE.BoxGeometry(8.2, 0.2, 4.4),
+        new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.7 })
+      );
+      bay3Plate.position.set(-5.8, 0.1, 0);
+      grpBeladySim.add(bay3Plate);
+
+      const label3 = createLabelSprite("3 FRAMES", "FIFO POLICY (9 FAULTS)", "#fda4af", "rgba(76, 5, 25, 0.9)", "#f43f5e");
+      label3.scale.set(3.2, 1.3, 1);
+      label3.position.set(-5.8, 0.3, 2.7);
+      grpBeladySim.add(label3);
+
+      const w3 = 2.0;
+      const gap3 = 0.5;
+      const startX3 = -5.8 - ((3 * w3 + 2 * gap3) / 2) + w3 / 2;
+      for (let i = 0; i < 3; i++) {
+        const xPos = startX3 + i * (w3 + gap3);
+        const base = new THREE.Mesh(new THREE.BoxGeometry(w3, 0.25, 2.8), new THREE.MeshStandardMaterial({ color: 0x27272a }));
+        base.position.set(xPos, 0.2, 0);
+        grpBeladySim.add(base);
+
+        const cube = new THREE.Mesh(
+          new THREE.BoxGeometry(w3 * 0.88, 1.6, 2.4),
+          new THREE.MeshStandardMaterial({ map: createBoxTexture("-", `SLOT ${i}`, "idle"), roughness: 0.3 })
+        );
+        cube.position.set(xPos, 1.15, 0);
+        cube.visible = false;
+        grpBeladySim.add(cube);
+        frameMeshesBelady3.push(cube);
+      }
+
+      // Right: 4-Frame Bay (X = +5.8)
+      const bay4Plate = new THREE.Mesh(
+        new THREE.BoxGeometry(9.8, 0.2, 4.4),
+        new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.7 })
+      );
+      bay4Plate.position.set(5.8, 0.1, 0);
+      grpBeladySim.add(bay4Plate);
+
+      const label4 = createLabelSprite("4 FRAMES", "FIFO POLICY (10 FAULTS ⚠️)", "#fecdd3", "rgba(136, 19, 55, 0.95)", "#f43f5e");
+      label4.scale.set(3.4, 1.3, 1);
+      label4.position.set(5.8, 0.3, 2.7);
+      grpBeladySim.add(label4);
+
+      const w4 = 1.8;
+      const gap4 = 0.45;
+      const startX4 = 5.8 - ((4 * w4 + 3 * gap4) / 2) + w4 / 2;
+      for (let i = 0; i < 4; i++) {
+        const xPos = startX4 + i * (w4 + gap4);
+        const base = new THREE.Mesh(new THREE.BoxGeometry(w4, 0.25, 2.8), new THREE.MeshStandardMaterial({ color: 0x27272a }));
+        base.position.set(xPos, 0.2, 0);
+        grpBeladySim.add(base);
+
+        const cube = new THREE.Mesh(
+          new THREE.BoxGeometry(w4 * 0.88, 1.6, 2.4),
+          new THREE.MeshStandardMaterial({ map: createBoxTexture("-", `SLOT ${i}`, "idle"), roughness: 0.3 })
+        );
+        cube.position.set(xPos, 1.15, 0);
+        cube.visible = false;
+        grpBeladySim.add(cube);
+        frameMeshesBelady4.push(cube);
+      }
+
+      // Top Center Banner
+      const centerBanner = createLabelSprite("BELADY'S ANOMALY SIMULATOR", "WORKLOAD D: [1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5]", "#38bdf8", "rgba(15, 23, 42, 0.95)", "#0284c7");
+      centerBanner.scale.set(7.5, 2.0, 1);
+      centerBanner.position.set(0, 5.5, -0.5);
+      grpBeladySim.add(centerBanner);
+    }
+
+    function buildBeladyArena() {
+      while (grpBeladyArena.children.length > 0) {
+        grpBeladyArena.remove(grpBeladyArena.children[0]);
+      }
+
+      const capacities = [1, 2, 3, 4, 5];
+      const fifoData = [12, 12, 9, 10, 5];
+      const lruData  = [12, 12, 10, 8, 5];
+
+      const basePlatform = new THREE.Mesh(
+        new THREE.BoxGeometry(20, 0.2, 7.5),
+        new THREE.MeshStandardMaterial({ color: 0x121215, roughness: 0.8, metalness: 0.2 })
+      );
+      basePlatform.position.set(0, -0.1, 0);
+      grpBeladyArena.add(basePlatform);
+
+      const legendSprite = createLabelSprite("🔴 FIFO (Non-Stack)   🟢 LRU (Stack)", "WORKLOAD D: [1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5]", "#38bdf8", "rgba(15, 23, 42, 0.95)", "#0284c7");
+      legendSprite.scale.set(6.2, 1.8, 1);
+      legendSprite.position.set(0, 8.2, -1.5);
+      grpBeladyArena.add(legendSprite);
+
+      capacities.forEach((c, idx) => {
+        const x = (idx - 2) * 3.6;
+        const isAnomaly = (idx === 3);
+
+        const pedMat = new THREE.MeshStandardMaterial({
+          color: isAnomaly ? 0x271017 : 0x18181b,
+          roughness: 0.6,
+          emissive: isAnomaly ? 0x4c0519 : 0x000000
+        });
+        const ped = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.25, 3.4), pedMat);
+        ped.position.set(x, 0.1, 0);
+        grpBeladyArena.add(ped);
+
+        const frameSprite = createLabelSprite(
+          c === 1 ? "1 FRAME" : `${c} FRAMES`,
+          isAnomaly ? "⚠️ ANOMALY" : "CAPACITY",
+          isAnomaly ? "#fb7185" : "#e4e4e7",
+          isAnomaly ? "rgba(76, 5, 25, 0.9)" : "rgba(24, 24, 27, 0.9)",
+          isAnomaly ? "#f43f5e" : "#3f3f46"
+        );
+        frameSprite.scale.set(2.4, 1.1, 1);
+        frameSprite.position.set(x, 0.3, 2.2);
+        grpBeladyArena.add(frameSprite);
+
+        const hFifo = fifoData[idx] * 0.42;
+        const geoFifo = new THREE.BoxGeometry(1.15, hFifo, 1.15);
+        const matFifo = new THREE.MeshStandardMaterial({
+          color: isAnomaly ? 0xf43f5e : 0xe11d48,
+          roughness: 0.3,
+          emissive: isAnomaly ? 0x881337 : 0x000000,
+          emissiveIntensity: isAnomaly ? 0.6 : 0.0
+        });
+        const barFifo = new THREE.Mesh(geoFifo, matFifo);
+        barFifo.position.set(x - 0.72, hFifo / 2 + 0.22, 0);
+        grpBeladyArena.add(barFifo);
+
+        const fifoValSprite = createLabelSprite(
+          `${fifoData[idx]}${isAnomaly ? " ⚠️" : ""}`,
+          "FIFO FAULTS",
+          isAnomaly ? "#fecdd3" : "#fda4af",
+          isAnomaly ? "rgba(136, 19, 55, 0.9)" : "rgba(24, 24, 27, 0.85)",
+          isAnomaly ? "#f43f5e" : "#e11d48"
+        );
+        fifoValSprite.scale.set(1.6, 0.8, 1);
+        fifoValSprite.position.set(x - 0.72, hFifo + 0.75, 0);
+        grpBeladyArena.add(fifoValSprite);
+
+        const hLru = lruData[idx] * 0.42;
+        const geoLru = new THREE.BoxGeometry(1.15, hLru, 1.15);
+        const matLru = new THREE.MeshStandardMaterial({
+          color: isAnomaly ? 0x10b981 : 0x059669,
+          roughness: 0.3,
+          emissive: isAnomaly ? 0x064e3b : 0x000000,
+          emissiveIntensity: isAnomaly ? 0.5 : 0.0
+        });
+        const barLru = new THREE.Mesh(geoLru, matLru);
+        barLru.position.set(x + 0.72, hLru / 2 + 0.22, 0);
+        grpBeladyArena.add(barLru);
+
+        const lruValSprite = createLabelSprite(
+          `${lruData[idx]}${isAnomaly ? " ✓" : ""}`,
+          "LRU FAULTS",
+          "#6ee7b7",
+          "rgba(24, 24, 27, 0.85)",
+          "#10b981"
+        );
+        lruValSprite.scale.set(1.6, 0.8, 1);
+        lruValSprite.position.set(x + 0.72, hLru + 0.75, 0);
+        grpBeladyArena.add(lruValSprite);
+
+        if (isAnomaly) {
+          const callout = createLabelSprite(
+            "⚠️ ANOMALY DETECTED (+1 FAULT)",
+            "FIFO: 9 → 10 Faults | LRU: 10 → 8 Faults",
+            "#fca5a5",
+            "rgba(136, 19, 55, 0.95)",
+            "#f43f5e"
+          );
+          callout.scale.set(3.8, 1.4, 1);
+          callout.position.set(x, hFifo + 2.1, 0);
+          grpBeladyArena.add(callout);
+        }
+      });
+    }
+
+    buildMemoryBay(3);
+    buildBeladySimBays();
+    buildBeladyArena();
+
+    // =========================================================================
+    // Belady Dual-Simulation Engine Logic
+    // =========================================================================
+    let beladyStep = 0;
+    let beladyAlgo = 'FIFO';
+    let beladySubMode = 'sim';
+    let beladyTimer = null;
+    let beladyHistory3 = simulateTrace(WORKLOADS['D'], 'FIFO', 3);
+    let beladyHistory4 = simulateTrace(WORKLOADS['D'], 'FIFO', 4);
+
+    function syncBeladySimulation() {
+      beladyHistory3 = simulateTrace(WORKLOADS['D'], beladyAlgo, 3);
+      beladyHistory4 = simulateTrace(WORKLOADS['D'], beladyAlgo, 4);
+      if (currentViewMode === 'belady' && beladySubMode === 'sim') {
+        renderBeladyTimelineStrip();
+      }
+      renderBeladyStepTable();
+      updateBeladyVisualState();
+    }
+
+    function renderBeladyTimelineStrip() {
+      const strip = document.getElementById('timeline-strip');
+      if (!strip) return;
+      strip.innerHTML = '';
+      const refs = WORKLOADS['D'];
+
+      refs.forEach((page, idx) => {
+        const node = document.createElement('div');
+        node.className = `ref-node ${idx === beladyStep - 1 ? 'active' : ''}`;
+        if (idx < beladyStep) {
+          const s3 = beladyHistory3[idx];
+          const s4 = beladyHistory4[idx];
+          if (s3.event !== s4.event) {
+            node.classList.add('passed-fault');
+            node.style.borderColor = 'var(--rose)';
+            node.style.background = 'rgba(244, 63, 94, 0.35)';
+          } else if (s3.event === 'HIT') {
+            node.classList.add('passed-hit');
+          } else {
+            node.classList.add('passed-fault');
+          }
+        }
+        node.textContent = page;
+        node.title = `Step ${idx + 1}: Page ${page}`;
+        node.onclick = () => beladyJumpToStep(idx + 1);
+        strip.appendChild(node);
+      });
+    }
+
+    function renderBeladyStepTable() {
+      const table = document.getElementById('belady-step-table');
+      if (!table) return;
+      table.innerHTML = `
+        <tr style="color: var(--text-subtle); border-bottom: 1px solid var(--border);">
+          <th style="padding: 4px 2px; text-align: left;">#</th>
+          <th style="padding: 4px 2px; text-align: center;">Ref</th>
+          <th style="padding: 4px 2px; text-align: center;">3 Frames</th>
+          <th style="padding: 4px 2px; text-align: center;">4 Frames</th>
+          <th style="padding: 4px 2px; text-align: right;">Status</th>
+        </tr>
+      `;
+      const refs = WORKLOADS['D'];
+      for (let i = 0; i < refs.length; i++) {
+        const s3 = beladyHistory3[i];
+        const s4 = beladyHistory4[i];
+        const tr = document.createElement('tr');
+        const isActive = (i === beladyStep - 1);
+        const isDivergence = (s3.event !== s4.event);
+
+        if (isActive) {
+          tr.style.background = 'rgba(56, 189, 248, 0.15)';
+          tr.style.fontWeight = '700';
+        } else if (isDivergence) {
+          tr.style.background = 'rgba(244, 63, 94, 0.1)';
+        }
+
+        tr.style.borderBottom = '1px solid var(--border-subtle)';
+        tr.style.cursor = 'pointer';
+        tr.onclick = () => beladyJumpToStep(i + 1);
+
+        tr.innerHTML = `
+          <td style="padding: 4px 2px;">${i + 1}</td>
+          <td style="padding: 4px 2px; text-align: center; color: var(--accent);">${refs[i]}</td>
+          <td style="padding: 4px 2px; text-align: center; color: ${s3.event === 'HIT' ? 'var(--emerald)' : 'var(--rose)'};">${s3.event} (${s3.faults}F)</td>
+          <td style="padding: 4px 2px; text-align: center; color: ${s4.event === 'HIT' ? 'var(--emerald)' : 'var(--rose)'};">${s4.event} (${s4.faults}F)</td>
+          <td style="padding: 4px 2px; text-align: right; color: ${isDivergence ? 'var(--rose)' : 'var(--text-subtle)'};">${isDivergence ? '⚠️ DIV' : 'SAME'}</td>
+        `;
+        table.appendChild(tr);
+      }
+    }
+
+    function updateBeladyVisualState() {
+      const stepPill = document.getElementById('step-pill');
+      const badge = document.getElementById('event-badge');
+      const summary = document.getElementById('status-summary');
+      const divergenceBanner = document.getElementById('belady-divergence-banner');
+
+      stepPill.textContent = `STEP ${beladyStep} / 12`;
+
+      if (beladyStep === 0) {
+        badge.style.display = 'none';
+        summary.innerHTML = 'Belady Lab Ready. Click <strong>Play</strong>, <strong>Next</strong>, or <strong>Jump to Step 8</strong>.';
+        if (divergenceBanner) {
+          divergenceBanner.innerHTML = 'Step through Workload D to observe 3-Frame vs 4-Frame cache behavior.';
+          divergenceBanner.style.background = 'rgba(39, 39, 42, 0.5)';
+          divergenceBanner.style.borderColor = 'var(--border)';
+        }
+        frameMeshesBelady3.forEach(m => { m.visible = false; });
+        frameMeshesBelady4.forEach(m => { m.visible = false; });
+        document.getElementById('belady-faults-3').textContent = '0';
+        document.getElementById('belady-hits-3').textContent = '0';
+        document.getElementById('belady-ram-3').textContent = '[ - , - , - ]';
+        document.getElementById('belady-event-3').textContent = 'IDLE';
+        document.getElementById('belady-event-3').style.color = 'var(--text-subtle)';
+
+        document.getElementById('belady-faults-4').textContent = '0';
+        document.getElementById('belady-hits-4').textContent = '0';
+        document.getElementById('belady-ram-4').textContent = '[ - , - , - , - ]';
+        document.getElementById('belady-event-4').textContent = 'IDLE';
+        document.getElementById('belady-event-4').style.color = 'var(--text-subtle)';
+        document.getElementById('belady-status-badge').textContent = 'STEP 0';
+        document.getElementById('belady-status-badge').className = 'event-badge';
+        renderBeladyTimelineStrip();
+        renderBeladyStepTable();
+        return;
+      }
+
+      const s3 = beladyHistory3[beladyStep - 1];
+      const s4 = beladyHistory4[beladyStep - 1];
+
+      badge.style.display = 'inline-block';
+      const isDivergence = (s3.event !== s4.event);
+      badge.textContent = isDivergence ? 'ANOMALY DIVERGENCE' : (s3.event === 'HIT' ? 'HIT' : 'FAULT');
+      badge.className = `event-badge ${isDivergence ? 'badge-fault' : (s3.event === 'HIT' ? 'badge-hit' : 'badge-fault')}`;
+
+      document.getElementById('belady-status-badge').textContent = `STEP ${beladyStep}: REQ ${s3.page}`;
+      document.getElementById('belady-status-badge').className = `event-badge ${isDivergence ? 'badge-fault' : 'badge-hit'}`;
+
+      document.getElementById('belady-faults-3').textContent = s3.faults;
+      document.getElementById('belady-hits-3').textContent = s3.hits;
+      document.getElementById('belady-ram-3').textContent = `[ ${s3.frames.join(', ')} ]`;
+      document.getElementById('belady-event-3').textContent = s3.event;
+      document.getElementById('belady-event-3').style.color = (s3.event === 'HIT') ? 'var(--emerald)' : 'var(--rose)';
+
+      document.getElementById('belady-faults-4').textContent = s4.faults;
+      document.getElementById('belady-hits-4').textContent = s4.hits;
+      document.getElementById('belady-ram-4').textContent = `[ ${s4.frames.join(', ')} ]`;
+      document.getElementById('belady-event-4').textContent = s4.event;
+      document.getElementById('belady-event-4').style.color = (s4.event === 'HIT') ? 'var(--emerald)' : 'var(--rose)';
+
+      if (beladyStep === 8) {
+        divergenceBanner.innerHTML = '<strong style="color: var(--rose);">⚠️ CRITICAL ANOMALY DIVERGENCE (Step 8):</strong> Page 1 is a <strong style="color: var(--emerald);">HIT</strong> in 3 Frames ([1,2,5]), but a <strong style="color: var(--rose);">FAULT</strong> in 4 Frames ([3,4,5,1])! FIFO evicted Page 1 at Step 7 because it was earliest loaded.';
+        divergenceBanner.style.background = 'rgba(136, 19, 55, 0.25)';
+        divergenceBanner.style.borderColor = 'var(--rose)';
+        summary.innerHTML = '<strong style="color: var(--rose);">⚠️ Step 8:</strong> 3-Frame FIFO gets a <strong>HIT</strong>, while 4-Frame FIFO gets a <strong>FAULT</strong>! Belady\'s Anomaly in action!';
+      } else if (beladyStep === 9) {
+        divergenceBanner.innerHTML = '<strong style="color: var(--rose);">⚠️ CONTINUED DIVERGENCE (Step 9):</strong> Page 2 is a <strong style="color: var(--emerald);">HIT</strong> in 3 Frames ([1,2,5]), but a <strong style="color: var(--rose);">FAULT</strong> in 4 Frames!';
+        divergenceBanner.style.background = 'rgba(136, 19, 55, 0.25)';
+        divergenceBanner.style.borderColor = 'var(--rose)';
+        summary.innerHTML = '<strong style="color: var(--rose);">Step 9:</strong> Second consecutive divergence: Page 2 HIT on 3-frame vs FAULT on 4-frame.';
+      } else if (beladyStep === 12) {
+        divergenceBanner.innerHTML = '<strong style="color: var(--rose);">🎯 WORKLOAD COMPLETE:</strong> 3-Frame FIFO = <strong>9 Faults</strong> | 4-Frame FIFO = <strong>10 Faults</strong>. <span style="color: var(--rose); font-weight:700;">+1 Frame caused +1 Fault!</span>';
+        divergenceBanner.style.background = 'rgba(136, 19, 55, 0.35)';
+        divergenceBanner.style.borderColor = 'var(--rose)';
+        summary.innerHTML = '<strong>Final Outcome:</strong> FIFO suffers 10 faults at 4 frames vs. 9 at 3 frames. Belady\'s Anomaly empirically confirmed!';
+      } else {
+        divergenceBanner.innerHTML = `Step ${beladyStep}: Requested Page <strong>${s3.page}</strong> &rarr; 3-Frame: ${s3.event} (${s3.faults} Faults) | 4-Frame: ${s4.event} (${s4.faults} Faults).`;
+        divergenceBanner.style.background = 'rgba(39, 39, 42, 0.5)';
+        divergenceBanner.style.borderColor = 'var(--border)';
+        summary.innerHTML = `Step ${beladyStep}: Page <strong>${s3.page}</strong> &rarr; 3-Frame ${s3.event} vs 4-Frame ${s4.event}.`;
+      }
+
+      for (let i = 0; i < 3; i++) {
+        const mesh = frameMeshesBelady3[i];
+        if (i < s3.frames.length) {
+          mesh.visible = true;
+          const p = s3.frames[i];
+          const isTarget = (p === s3.page);
+          const status = isTarget ? (s3.event === 'HIT' ? 'hit' : 'fault') : 'idle';
+          mesh.material.map = createBoxTexture(String(p), `SLOT ${i}`, status);
+          mesh.material.needsUpdate = true;
+        } else {
+          mesh.visible = false;
+        }
+      }
+
+      for (let i = 0; i < 4; i++) {
+        const mesh = frameMeshesBelady4[i];
+        if (i < s4.frames.length) {
+          mesh.visible = true;
+          const p = s4.frames[i];
+          const isTarget = (p === s4.page);
+          const status = isTarget ? (s4.event === 'HIT' ? 'hit' : 'fault') : 'idle';
+          mesh.material.map = createBoxTexture(String(p), `SLOT ${i}`, status);
+          mesh.material.needsUpdate = true;
+        } else {
+          mesh.visible = false;
+        }
+      }
+
+      renderBeladyTimelineStrip();
+      renderBeladyStepTable();
+    }
+
+    function beladyStepForward() {
+      if (beladyStep < 12) {
+        beladyStep++;
+        updateBeladyVisualState();
+      } else {
+        beladyPause();
+      }
+    }
+
+    function beladyStepBack() {
+      if (beladyStep > 0) {
+        beladyStep--;
+        updateBeladyVisualState();
+      }
+    }
+
+    function beladyJumpToStep(step) {
+      beladyPause();
+      beladyStep = step;
+      updateBeladyVisualState();
+    }
+
+    function beladyJumpToAnomaly() {
+      beladyPause();
+      beladyStep = 8;
+      updateBeladyVisualState();
+    }
+
+    function beladyReset() {
+      beladyPause();
+      beladyStep = 0;
+      updateBeladyVisualState();
+    }
+
+    function beladyTogglePlayback() {
+      if (beladyTimer) {
+        beladyPause();
+      } else {
+        beladyPlay();
+      }
+    }
+
+    function beladyPlay() {
+      if (beladyStep >= 12) {
+        beladyStep = 0;
+      }
+      document.getElementById('belady-play-btn').textContent = 'Pause';
+      beladyTimer = setInterval(() => {
+        if (beladyStep < 12) {
+          beladyStepForward();
+        } else {
+          beladyPause();
+        }
+      }, 750);
+    }
+
+    function beladyPause() {
+      document.getElementById('belady-play-btn').textContent = 'Play';
+      if (beladyTimer) {
+        clearInterval(beladyTimer);
+        beladyTimer = null;
+      }
+    }
+
+    function setBeladyAlgo(algo) {
+      beladyAlgo = algo;
+      document.getElementById('btn-belady-algo-fifo').className = `segment-btn ${algo === 'FIFO' ? 'active' : ''}`;
+      document.getElementById('btn-belady-algo-lru').className = `segment-btn ${algo === 'LRU' ? 'active' : ''}`;
+      syncBeladySimulation();
+    }
+
+    function setBeladySubMode(mode) {
+      beladySubMode = mode;
+      document.getElementById('btn-belady-view-sim').className = `segment-btn ${mode === 'sim' ? 'active' : ''}`;
+      document.getElementById('btn-belady-view-arena').className = `segment-btn ${mode === 'arena' ? 'active' : ''}`;
+
+      if (mode === 'sim') {
+        grpBeladySim.visible = true;
+        grpBeladyArena.visible = false;
+        document.getElementById('belady-sim-controls').style.display = 'block';
+        document.getElementById('belady-arena-controls').style.display = 'none';
+        document.getElementById('belady-sim-telemetry').style.display = 'block';
+        document.getElementById('belady-arena-telemetry').style.display = 'none';
+        document.getElementById('footer-step-indicator').style.display = 'flex';
+        document.getElementById('timeline-strip').style.display = 'flex';
+        camera.position.set(0, 11, 18);
+        controls.target.set(0, 1.5, 0);
+        controls.update();
+        renderBeladyTimelineStrip();
+        updateBeladyVisualState();
+      } else if (mode === 'arena') {
+        beladyPause();
+        grpBeladySim.visible = false;
+        grpBeladyArena.visible = true;
+        document.getElementById('belady-sim-controls').style.display = 'none';
+        document.getElementById('belady-arena-controls').style.display = 'block';
+        document.getElementById('belady-sim-telemetry').style.display = 'none';
+        document.getElementById('belady-arena-telemetry').style.display = 'block';
+        document.getElementById('footer-step-indicator').style.display = 'none';
+        document.getElementById('timeline-strip').style.display = 'none';
+        camera.position.set(0, 9.5, 17);
+        controls.target.set(0, 3.2, 0);
+        controls.update();
+      }
+    }
+
+    // =========================================================================
+    // UI Timeline & Synchronization (Memory Simulator)
+    // =========================================================================
+    function syncSimulation() {
+      activeHistory = simulateTrace(activeRefs, activeAlgo, activeCapacity);
+      renderTimelineStrip();
+      updateVisualState();
+    }
+
+    function renderTimelineStrip() {
+      if (currentViewMode === 'belady') {
+        renderBeladyTimelineStrip();
+        return;
+      }
+      const strip = document.getElementById('timeline-strip');
+      strip.innerHTML = '';
+
+      activeRefs.forEach((page, idx) => {
+        const node = document.createElement('div');
+        node.className = `ref-node ${idx === currentStep - 1 ? 'active' : ''}`;
+        if (idx < currentStep) {
+          const item = activeHistory[idx];
+          node.classList.add(item.event === 'HIT' ? 'passed-hit' : 'passed-fault');
+        }
+        node.textContent = page;
+        node.title = `Step ${idx + 1}: Page ${page}`;
+        node.onclick = () => jumpToStep(idx + 1);
+        strip.appendChild(node);
+      });
+    }
+
+    function updateVisualState() {
+      if (currentViewMode === 'belady') {
+        updateBeladyVisualState();
+        return;
+      }
+      const stepPill = document.getElementById('step-pill');
+      const badge = document.getElementById('event-badge');
+      const summary = document.getElementById('status-summary');
+
+      stepPill.textContent = `STEP ${currentStep} / ${activeRefs.length}`;
+
+      if (currentStep === 0) {
+        badge.style.display = 'none';
+        summary.innerHTML = 'Simulation Ready. Click <strong>Play</strong> or <strong>Next</strong>.';
+        frameMeshes.forEach(mesh => { mesh.visible = false; });
+        document.getElementById('stat-hits').textContent = '0';
+        document.getElementById('stat-faults').textContent = '0';
+        document.getElementById('stat-evictions').textContent = '0';
+        document.getElementById('stat-hitratio').textContent = '0.0%';
+        return;
+      }
+
+      const state = activeHistory[currentStep - 1];
+
+      badge.style.display = 'inline-block';
+      badge.textContent = state.event;
+      badge.className = `event-badge ${state.event === 'HIT' ? 'badge-hit' : 'badge-fault'}`;
+
+      if (state.event === 'HIT') {
+        summary.innerHTML = `Step ${state.step}: Page <strong>${state.page}</strong> HIT resident in Frame.`;
+      } else {
+        if (state.evictedPage !== null) {
+          summary.innerHTML = `Step ${state.step}: Page <strong>${state.page}</strong> FAULT &rarr; Evicted Page <strong>${state.evictedPage}</strong> via ${activeAlgo}.`;
+        } else {
+          summary.innerHTML = `Step ${state.step}: Page <strong>${state.page}</strong> FAULT &rarr; Loaded into empty frame slot.`;
+        }
+      }
+
+      // Update 3D Cubes
+      for (let i = 0; i < activeCapacity; i++) {
+        const mesh = frameMeshes[i];
+        if (mesh) {
+          if (i < state.frames.length) {
+            mesh.visible = true;
+            const p = state.frames[i];
+            const isTarget = (p === state.page);
+            const status = isTarget ? (state.event === 'HIT' ? 'hit' : 'fault') : 'idle';
+            mesh.material.map = createBoxTexture(String(p), `SLOT ${i}`, status);
+            mesh.material.needsUpdate = true;
+          } else {
+            mesh.visible = false;
+          }
+        }
+      }
+
+      // Stats
+      document.getElementById('stat-hits').textContent = state.hits;
+      document.getElementById('stat-faults').textContent = state.faults;
+      document.getElementById('stat-evictions').textContent = state.evictions;
+      document.getElementById('stat-hitratio').textContent = `${state.hitRatio}%`;
+
+      // Log Stream
+      const stream = document.getElementById('stream-container');
+      const item = document.createElement('div');
+      item.className = `stream-item ${state.event.toLowerCase()}`;
+      item.innerHTML = `<span>#${state.step} Req ${state.page} &rarr; ${state.event}</span><span>${state.evictedPage !== null ? 'Evict ' + state.evictedPage : 'Loaded'}</span>`;
+      stream.insertBefore(item, stream.firstChild);
+
+      renderTimelineStrip();
+    }
+
+    // Playback Controls
+    function stepForward() {
+      if (currentStep < activeRefs.length) {
+        currentStep++;
+        updateVisualState();
+      } else {
+        pause();
+      }
+    }
+
+    function stepBack() {
+      if (currentStep > 0) {
+        currentStep--;
+        updateVisualState();
+      }
+    }
+
+    function jumpToStep(step) {
+      pause();
+      currentStep = step;
+      updateVisualState();
+    }
+
+    function resetSimulation() {
+      pause();
+      currentStep = 0;
+      document.getElementById('stream-container').innerHTML = '';
+      updateVisualState();
+    }
+
+    function togglePlayback() {
+      if (isRunning) {
+        pause();
+      } else {
+        play();
+      }
+    }
+
+    function play() {
+      if (currentStep >= activeRefs.length) {
+        currentStep = 0;
+      }
+      isRunning = true;
+      document.getElementById('play-btn').textContent = 'Pause';
+      timer = setInterval(() => {
+        if (currentStep < activeRefs.length) {
+          stepForward();
+        } else {
+          pause();
+        }
+      }, 700);
+    }
+
+    function pause() {
+      isRunning = false;
+      document.getElementById('play-btn').textContent = 'Play';
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+    }
+
+    function setAlgorithm(algo) {
+      activeAlgo = algo;
+      document.getElementById('btn-fifo').className = `segment-btn ${algo === 'FIFO' ? 'active' : ''}`;
+      document.getElementById('btn-lru').className = `segment-btn ${algo === 'LRU' ? 'active' : ''}`;
+      document.getElementById('active-algo-label').textContent = algo;
+      syncSimulation();
+    }
+
+    function setWorkload(key) {
+      activeKey = key;
+      activeRefs = WORKLOADS[key];
+
+      document.querySelectorAll('.workload-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-w') === key);
+      });
+      const descEl = document.getElementById('workload-desc');
+      if (descEl) descEl.textContent = WORKLOAD_LABELS[key] || '';
+
+      resetSimulation();
+      syncSimulation();
+    }
+
+    // =========================================================================
+    // Mode Switcher: Clean, Multi-View Orchestration
+    // =========================================================================
+    let currentViewMode = 'memory';
+
+    function switchMode(mode) {
+      currentViewMode = mode;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      const btn = document.querySelector(`.tab-btn[data-mode="${mode}"]`);
+      if (btn) btn.classList.add('active');
+
+      const canvasEl = document.getElementById('webgl-canvas');
+      const hudLayer = document.getElementById('hud-layer');
+      const fsWorkbench = document.getElementById('view-filesystem-workbench');
+
+      if (mode === 'filesystem') {
+        canvasEl.style.display = 'none';
+        hudLayer.style.display = 'none';
+        fsWorkbench.style.display = 'block';
+        initFileSystemView();
+      } else if (mode === 'memory') {
+        canvasEl.style.display = 'block';
+        hudLayer.style.display = 'flex';
+        fsWorkbench.style.display = 'none';
+
+        grpMemory.visible = true;
+        grpBelady.visible = false;
+
+        document.getElementById('panel-memory-controls').style.display = 'block';
+        document.getElementById('panel-belady-controls').style.display = 'none';
+        document.getElementById('panel-memory-telemetry').style.display = 'block';
+        document.getElementById('panel-belady-telemetry').style.display = 'none';
+
+        document.getElementById('footer-step-indicator').style.display = 'flex';
+        document.getElementById('timeline-strip').style.display = 'flex';
+        document.getElementById('status-summary').innerHTML = 'Click <strong>Play</strong> or select a reference node to inspect frame residency.';
+
+        camera.position.set(0, 9.5, 13.5);
+        controls.target.set(0, 0.8, 0);
+        controls.update();
+        renderTimelineStrip();
+        updateVisualState();
+      } else if (mode === 'belady') {
+        canvasEl.style.display = 'block';
+        hudLayer.style.display = 'flex';
+        fsWorkbench.style.display = 'none';
+
+        grpMemory.visible = false;
+        grpBelady.visible = true;
+
+        document.getElementById('panel-memory-controls').style.display = 'none';
+        document.getElementById('panel-belady-controls').style.display = 'block';
+        document.getElementById('panel-memory-telemetry').style.display = 'none';
+        document.getElementById('panel-belady-telemetry').style.display = 'block';
+        setBeladySubMode(beladySubMode);
+      }
+    }
+
+    // =========================================================================
+    // FILE SYSTEM & SECURITY WORKBENCH LOGIC (UNIT 5 ENGINE)
+    // =========================================================================
+    const FS_PERMISSIONS = {
+      "Research Agent": { "/workspace": "r", "/workspace/notes": "rwcd" },
+      "Coding Agent": { "/workspace/notes": "r", "/workspace/results": "rwcd" },
+      "Report Agent": { "/workspace/notes": "r", "/workspace/results": "r", "/workspace/reports": "rwcd" }
+    };
+
+    const FS_NODES = [
+      { path: "/", isDir: true, name: "/", owner: "system", size: 0, version: 1 },
+      { path: "/workspace", isDir: true, name: "workspace", owner: "system", size: 0, version: 1 },
+      { path: "/workspace/notes", isDir: true, name: "notes/", owner: "Research", size: 0, version: 1 },
+      { path: "/workspace/notes/source_notes.txt", isDir: false, name: "source_notes.txt", owner: "Research", size: 21, version: 1 },
+      { path: "/workspace/results", isDir: true, name: "results/", owner: "Coding", size: 0, version: 1 },
+      { path: "/workspace/results/results.csv", isDir: false, name: "results.csv", owner: "Coding", size: 12, version: 1 },
+      { path: "/workspace/reports", isDir: true, name: "reports/", owner: "Report", size: 0, version: 1 },
+      { path: "/workspace/reports/final_report.md", isDir: false, name: "final_report.md", owner: "Report", size: 16, version: 1 }
+    ];
+
+    const FS_AUDIT_LOG = [
+      { step: 1, agent: "Research", op: "list", status: "OK", path: "/workspace", reason: "Listed 3 items" },
+      { step: 2, agent: "Research", op: "read", status: "OK", path: "/workspace/notes/source_notes.txt", reason: "Read 21 bytes" },
+      { step: 3, agent: "Research", op: "write", status: "OK", path: "/workspace/notes/source_notes.txt", reason: "Overwrote 32 bytes (v1->v2)" },
+      { step: 4, agent: "Coding", op: "read", status: "OK", path: "/workspace/notes/source_notes.txt", reason: "Read 32 bytes" },
+      { step: 5, agent: "Coding", op: "write", status: "OK", path: "/workspace/results/results.csv", reason: "Wrote results trace (v1->v2)" },
+      { step: 6, agent: "Report", op: "read", status: "OK", path: "/workspace/results/results.csv", reason: "Read results table" },
+      { step: 7, agent: "Report", op: "create", status: "OK", path: "/workspace/reports/summary.md", reason: "Created new document" },
+      { step: 8, agent: "Report", op: "write", status: "OK", path: "/workspace/reports/final_report.md", reason: "Finalized synthesis draft" },
+      { step: 9, agent: "Report", op: "write", status: "DENIED", path: "/workspace/results/results.csv", reason: "Report Agent only has 'r' on /results" },
+      { step: 10, agent: "Research", op: "delete", status: "DENIED", path: "/workspace/reports/final_report.md", reason: "No delete permission on /reports" },
+      { step: 11, agent: "Coding", op: "read", status: "ERROR", path: "/workspace/results/missing.csv", reason: "Path does not exist" },
+      { step: 12, agent: "Coding", op: "read", status: "ERROR", path: "workspace/results/results.csv", reason: "Invalid path (must start with '/')" },
+      { step: 13, agent: "Coding", op: "search", status: "OK", path: "/workspace/results", reason: "Found 1 matching file" },
+      { step: 14, agent: "Report", op: "delete", status: "OK", path: "/workspace/reports/summary.md", reason: "Deleted temporary draft" },
+      { step: 15, agent: "Coding", op: "write", status: "CONFLICT", path: "/workspace/results/results.csv", reason: "Stale write: Expected v1, current is v2" }
+    ];
+
+    let currentSelectedAgent = "Research Agent";
+    let currentSelectedNode = FS_NODES[1]; // /workspace
+
+    function selectFsAgent(agent) {
+      currentSelectedAgent = agent;
+      document.getElementById('btn-agent-research').className = `agent-pill-btn ${agent === 'Research Agent' ? 'active' : ''}`;
+      document.getElementById('btn-agent-coding').className = `agent-pill-btn ${agent === 'Coding Agent' ? 'active' : ''}`;
+      document.getElementById('btn-agent-report').className = `agent-pill-btn ${agent === 'Report Agent' ? 'active' : ''}`;
+
+      const matrixBody = document.getElementById('agent-matrix-body');
+      matrixBody.innerHTML = '';
+
+      const rules = FS_PERMISSIONS[agent] || {};
+      for (const [prefix, letters] of Object.entries(rules)) {
+        const tr = document.createElement('tr');
+        const badgeClass = letters.includes('w') ? 'rwcd' : 'r';
+        tr.innerHTML = `
+          <td style="color: var(--text);">${prefix}</td>
+          <td><span class="perm-badge ${badgeClass}">${letters}</span></td>
+          <td style="color: var(--text-subtle);">${prefix === '/workspace' ? 'Inherited' : 'Specific'}</td>
+        `;
+        matrixBody.appendChild(tr);
+      }
+      inspectNode(currentSelectedNode);
+    }
+
+    function renderFileSystemTree() {
+      const container = document.getElementById('tree-container');
+      container.innerHTML = '';
+
+      FS_NODES.forEach(node => {
+        const row = document.createElement('div');
+        row.className = `tree-row ${node.path === currentSelectedNode.path ? 'selected' : ''}`;
+        
+        const indent = (node.path.split('/').length - 2) * 16;
+        const icon = node.isDir ? '📁' : '📄';
+
+        row.innerHTML = `
+          <div class="tree-label" style="padding-left: ${Math.max(0, indent)}px;">
+            <span>${icon}</span>
+            <span>${node.name}</span>
+          </div>
+          <div class="tree-meta">
+            ${node.isDir ? '<span>DIR</span>' : `<span>${node.size}B</span><span>v${node.version}</span>`}
+          </div>
+        `;
+        row.onclick = () => {
+          document.querySelectorAll('.tree-row').forEach(r => r.classList.remove('selected'));
+          row.classList.add('selected');
+          inspectNode(node);
+        };
+        container.appendChild(row);
+      });
+    }
+
+    function inspectNode(node) {
+      currentSelectedNode = node;
+      document.getElementById('selected-node-tag').textContent = node.path;
+      document.getElementById('insp-path').textContent = node.path;
+      document.getElementById('insp-type').textContent = node.isDir ? 'Directory' : 'Regular File';
+      document.getElementById('insp-owner').textContent = node.owner;
+      document.getElementById('insp-size').textContent = node.isDir ? '0 bytes (Directory)' : `${node.size} bytes`;
+      document.getElementById('insp-version').textContent = `v${node.version}`;
+
+      const rightsBox = document.getElementById('insp-agent-rights');
+      rightsBox.innerHTML = '';
+
+      ["Research Agent", "Coding Agent", "Report Agent"].forEach(a => {
+        const rights = resolveRights(a, node.path);
+        const col = document.createElement('div');
+        col.style.background = '#18181b';
+        col.style.border = '1px solid var(--border)';
+        col.style.borderRadius = '6px';
+        col.style.padding = '8px';
+        col.style.textAlign = 'center';
+
+        const badgeClass = rights.includes('w') ? 'rwcd' : (rights.length > 0 ? 'r' : 'none');
+        col.innerHTML = `
+          <div style="font-size: 10px; color: var(--text-subtle); margin-bottom: 4px;">${a.replace(' Agent', '')}</div>
+          <span class="perm-badge ${badgeClass}">${rights || 'DENIED'}</span>
+        `;
+        rightsBox.appendChild(col);
+      });
+    }
+
+    function resolveRights(agent, path) {
+      let bestLen = -1;
+      let best = "";
+      const rules = FS_PERMISSIONS[agent] || {};
+      for (const [prefix, letters] of Object.entries(rules)) {
+        if (path === prefix || path.startsWith(prefix.replace(/\/$/, '') + '/')) {
+          if (prefix.length > bestLen) {
+            bestLen = prefix.length;
+            best = letters;
+          }
+        }
+      }
+      return best;
+    }
+
+    function runSandboxTest() {
+      const agent = document.getElementById('sandbox-agent').value;
+      const op = document.getElementById('sandbox-op').value;
+      const path = document.getElementById('sandbox-path').value;
+      const fb = document.getElementById('sandbox-feedback');
+
+      const opPerms = { read: 'r', list: 'r', stat: 'r', write: 'w', create: 'c', delete: 'd' };
+      const needed = opPerms[op];
+      const rights = resolveRights(agent, path);
+
+      fb.style.display = 'block';
+
+      if (!rights || !rights.includes(needed)) {
+        fb.className = 'test-feedback denied';
+        fb.innerHTML = `
+          <strong>[403 FORBIDDEN - ACCESS DENIED]</strong><br>
+          ${agent} lacks '${needed}' permission on <code>${path}</code>.<br>
+          <span style="font-size: 11px; color: var(--text-muted);">
+            Protection rule checked prior to file existence lookup. Zero information leaked.
+          </span>
+        `;
+      } else {
+        fb.className = 'test-feedback ok';
+        fb.innerHTML = `
+          <strong>[200 OK - PERMITTED]</strong><br>
+          ${agent} granted '${needed}' access on <code>${path}</code>.<br>
+          <span style="font-size: 11px; color: var(--text-muted);">
+            Longest-prefix rule matched successfully with active rights: [<strong>${rights}</strong>].
+          </span>
+        `;
+      }
+    }
+
+    function renderAuditTable(filter = 'ALL') {
+      const tbody = document.getElementById('fs-audit-rows');
+      tbody.innerHTML = '';
+
+      FS_AUDIT_LOG.forEach(entry => {
+        if (filter !== 'ALL' && entry.status !== filter) return;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="color: var(--text-subtle);">${entry.step}</td>
+          <td style="color: var(--text);">${entry.agent}</td>
+          <td style="color: var(--text-muted);">${entry.op}</td>
+          <td><span class="badge-status ${entry.status}">${entry.status}</span></td>
+          <td style="font-size: 10.5px; color: #cbd5e1;" title="${entry.reason}">${entry.path}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterAudit(status) {
+      document.querySelectorAll('.audit-pill').forEach(p => p.classList.remove('active'));
+      event.target.classList.add('active');
+      renderAuditTable(status);
+    }
+
+    function initFileSystemView() {
+      selectFsAgent(currentSelectedAgent);
+      renderFileSystemTree();
+      inspectNode(currentSelectedNode);
+      renderAuditTable('ALL');
+    }
+
+    // =========================================================================
+    // Global Event Listeners & Keyboard Shortcuts
+    // =========================================================================
+    window.addEventListener('keydown', (e) => {
+      if (document.getElementById('hud-layer').style.display !== 'none') {
+        if (e.code === 'Space') {
+          e.preventDefault();
+          togglePlayback();
+        } else if (e.code === 'ArrowRight') {
+          stepForward();
+        } else if (e.code === 'ArrowLeft') {
+          stepBack();
+        } else if (e.code === 'KeyR') {
+          resetSimulation();
+        }
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Start with the Memory Simulator by default
+    switchMode('memory');
+
+    function render() {
+      requestAnimationFrame(render);
+      if (grpMemory.visible || grpBelady.visible) {
+        controls.update();
+        renderer.render(scene, camera);
+      }
+    }
+    render();
+  </script>
+</body>
+</html>
