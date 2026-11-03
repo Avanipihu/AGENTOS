@@ -1,0 +1,39 @@
+Initial directory tree:
+/
+`-- workspace/
+    |-- notes/
+    |   `-- source_notes.txt (v1, 21 B)
+    |-- reports/
+    |   `-- final_report.md (v1, 15 B)
+    `-- results/
+        `-- results.csv (v1, 11 B)
+
+Audit log:
+Step  Agent            Operation  Status    Path                                    Reason
+   1  Research Agent   list       OK        /workspace                              listed
+   2  Research Agent   read       OK        /workspace/notes/source_notes.txt       read
+   3  Research Agent   write      OK        /workspace/notes/source_notes.txt       written, now version 2
+   4  Coding Agent     read       OK        /workspace/notes/source_notes.txt       read
+   5  Coding Agent     write      OK        /workspace/results/results.csv          written, now version 2
+   6  Report Agent     read       OK        /workspace/results/results.csv          read
+   7  Report Agent     create     OK        /workspace/reports/summary.md           created
+   8  Report Agent     write      OK        /workspace/reports/final_report.md      written, now version 2
+   9  Report Agent     write      DENIED    /workspace/results/results.csv          Report Agent has no 'w' permission on /workspace/results/results.csv
+  10  Research Agent   delete     DENIED    /workspace/reports/final_report.md      Research Agent has no 'd' permission on /workspace/reports/final_report.md
+  11  Coding Agent     read       ERROR     /workspace/results/missing.csv          /workspace/results/missing.csv does not exist
+  12  Coding Agent     read       ERROR     workspace/results/results.csv           invalid path: path must be an absolute string starting with '/', got 'workspace/results/results.csv'
+  13  Coding Agent     search     OK        /workspace/results                      1 match(es)
+  14  Report Agent     delete     OK        /workspace/reports/summary.md           deleted
+  15  Coding Agent     write      CONFLICT  /workspace/results/results.csv          stale write: based on version 1, file is at version 2
+
+Final directory tree:
+/
+`-- workspace/
+    |-- notes/
+    |   `-- source_notes.txt (v2, 31 B)
+    |-- reports/
+    |   `-- final_report.md (v2, 38 B)
+    `-- results/
+        `-- results.csv (v2, 26 B)
+
+Operations: 15   OK: 10   Denied: 2   Error: 2   Conflict: 1
